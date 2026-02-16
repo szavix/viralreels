@@ -1,0 +1,14 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  transpilePackages: ["@viralreels/shared", "@viralreels/supabase"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.cdninstagram.com",
+      },
+    ],
+  },
+};
+
+module.exports = nextConfig;

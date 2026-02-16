@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "ViralReelsAI",
+    "slug": "viralreels-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "viralreels",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.viralreels.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.viralreels.app"
+    },
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}
