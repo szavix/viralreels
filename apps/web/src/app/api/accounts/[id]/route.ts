@@ -11,7 +11,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { client, error } = await getAuthenticatedClient();
+  const { client, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   try {
@@ -42,10 +42,10 @@ export async function PATCH(
  * Delete an account by ID.
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { client, error } = await getAuthenticatedClient();
+  const { client, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   try {

@@ -3,7 +3,6 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
-import "../../global.css";
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);

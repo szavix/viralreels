@@ -10,7 +10,7 @@ import type { FilterOption } from "@viralreels/shared";
  * Query params: filter, accountId, page, pageSize, search
  */
 export async function GET(request: NextRequest) {
-  const { client, error } = await getAuthenticatedClient();
+  const { client, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   const { searchParams } = new URL(request.url);

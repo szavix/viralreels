@@ -7,8 +7,8 @@ import { fetchAccounts, createAccount } from "@viralreels/supabase";
  *
  * List all tracked accounts.
  */
-export async function GET() {
-  const { client, error } = await getAuthenticatedClient();
+export async function GET(request: NextRequest) {
+  const { client, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   try {
@@ -29,7 +29,7 @@ export async function GET() {
  * Create a new account to track. Body: { username: string }
  */
 export async function POST(request: NextRequest) {
-  const { client, error } = await getAuthenticatedClient();
+  const { client, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   try {

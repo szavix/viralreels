@@ -13,7 +13,8 @@ import {
 import { useRouter } from "expo-router";
 import type { Reel, FilterOption } from "@viralreels/shared";
 import { formatCount, getViralTier, VIRAL_TIER_COLORS, FILTER_OPTIONS } from "@viralreels/shared";
-import { fetchReels, triggerScrape, type ReelsResponse } from "@/lib/api";
+import { fetchReels, triggerScrape } from "@/lib/api";
+import tw from "@/lib/tw";
 
 const { width } = Dimensions.get("window");
 const COLUMN_COUNT = 2;
@@ -95,10 +96,8 @@ export default function DashboardScreen() {
       <TouchableOpacity
         onPress={() => router.push(`/reel/${item.id}`)}
         activeOpacity={0.8}
-        style={{ width: CARD_WIDTH, marginBottom: GAP }}
-        className="overflow-hidden rounded-xl border border-border bg-card"
+        style={[tw`overflow-hidden rounded-xl border border-border bg-card`, { width: CARD_WIDTH, marginBottom: GAP }]}
       >
-        {/* Thumbnail */}
         <View style={{ width: CARD_WIDTH, height: CARD_WIDTH * (16 / 9) }}>
           {item.thumbnail_url ? (
             <Image
@@ -107,43 +106,37 @@ export default function DashboardScreen() {
               resizeMode="cover"
             />
           ) : (
-            <View className="flex-1 items-center justify-center bg-muted">
-              <Text className="text-2xl">🎬</Text>
+            <View style={tw`flex-1 items-center justify-center bg-muted`}>
+              <Text style={tw`text-2xl`}>🎬</Text>
             </View>
           )}
 
-          {/* Score badge */}
-          <View className="absolute left-2 top-2 flex-row items-center rounded-full bg-black/60 px-2 py-1">
-            <View
-              className="mr-1 h-2 w-2 rounded-full"
-              style={{ backgroundColor: VIRAL_TIER_COLORS[tier] }}
-            />
-            <Text className="text-xs font-bold text-white">
+          <View style={tw`absolute left-2 top-2 flex-row items-center rounded-full bg-black/60 px-2 py-1`}>
+            <View style={[tw`mr-1 h-2 w-2 rounded-full`, { backgroundColor: VIRAL_TIER_COLORS[tier] }]} />
+            <Text style={tw`text-xs font-bold text-white`}>
               {(item.viral_score * 100).toFixed(1)}%
             </Text>
           </View>
 
-          {/* Rising star badge */}
           {item.is_rising_star && (
-            <View className="absolute right-2 top-2 rounded-full bg-amber-500/90 px-2 py-1">
-              <Text className="text-xs font-bold text-white">⚡ Rising</Text>
+            <View style={tw`absolute right-2 top-2 rounded-full bg-amber-500 px-2 py-1`}>
+              <Text style={tw`text-xs font-bold text-white`}>⚡ Rising</Text>
             </View>
           )}
         </View>
 
-        {/* Info */}
-        <View className="p-2">
-          <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+        <View style={tw`p-2`}>
+          <Text style={tw`text-sm font-medium text-foreground`} numberOfLines={1}>
             @{item.author_username}
           </Text>
-          <View className="mt-1 flex-row items-center space-x-3">
-            <Text className="text-xs text-muted-foreground">
+          <View style={tw`mt-1 flex-row items-center gap-3`}>
+            <Text style={tw`text-xs text-muted-foreground`}>
               👁 {formatCount(item.view_count)}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text style={tw`text-xs text-muted-foreground`}>
               ❤️ {formatCount(item.like_count)}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text style={tw`text-xs text-muted-foreground`}>
               💬 {formatCount(item.comment_count)}
             </Text>
           </View>
@@ -153,25 +146,25 @@ export default function DashboardScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
-      {/* Header with Scrape Now button */}
-      <View className="flex-row items-center justify-between border-b border-border px-4 py-2">
-        <Text className="text-lg font-bold text-foreground">Viral Reels</Text>
+    <View style={tw`flex-1 bg-background`}>
+      {/* Header */}
+      <View style={tw`flex-row items-center justify-between border-b border-border px-4 py-2`}>
+        <Text style={tw`text-lg font-bold text-foreground`}>Viral Reels</Text>
         <TouchableOpacity
           onPress={handleScrapeNow}
           disabled={isScraping}
-          className={`rounded-lg px-3 py-2 ${isScraping ? "bg-muted" : "bg-primary"}`}
+          style={tw`rounded-lg px-3 py-2 ${isScraping ? "bg-muted" : "bg-primary"}`}
         >
           {isScraping ? (
             <ActivityIndicator color="#fafafa" size="small" />
           ) : (
-            <Text className="text-sm font-semibold text-white">Scrape Now</Text>
+            <Text style={tw`text-sm font-semibold text-white`}>Scrape Now</Text>
           )}
         </TouchableOpacity>
       </View>
 
       {/* Filter tabs */}
-      <View className="border-b border-border px-2 py-2">
+      <View style={tw`border-b border-border px-2 py-2`}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -180,15 +173,9 @@ export default function DashboardScreen() {
           renderItem={({ item: [key, label] }) => (
             <TouchableOpacity
               onPress={() => setFilter(key)}
-              className={`mr-2 rounded-full px-4 py-2 ${
-                filter === key ? "bg-primary" : "bg-muted"
-              }`}
+              style={tw`mr-2 rounded-full px-4 py-2 ${filter === key ? "bg-primary" : "bg-muted"}`}
             >
-              <Text
-                className={`text-sm font-medium ${
-                  filter === key ? "text-white" : "text-muted-foreground"
-                }`}
-              >
+              <Text style={tw`text-sm font-medium ${filter === key ? "text-white" : "text-muted-foreground"}`}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -196,9 +183,9 @@ export default function DashboardScreen() {
         />
       </View>
 
-      {/* Reel grid */}
+      {/* Grid */}
       {isLoading && reels.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
+        <View style={tw`flex-1 items-center justify-center`}>
           <ActivityIndicator color="#8b5cf6" size="large" />
         </View>
       ) : (
@@ -210,27 +197,21 @@ export default function DashboardScreen() {
           contentContainerStyle={{ padding: GAP }}
           columnWrapperStyle={{ justifyContent: "space-between" }}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="#8b5cf6"
-            />
+            <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#8b5cf6" />
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             hasMore && reels.length > 0 ? (
-              <View className="items-center py-4">
+              <View style={tw`items-center py-4`}>
                 <ActivityIndicator color="#8b5cf6" />
               </View>
             ) : null
           }
           ListEmptyComponent={
-            <View className="flex-1 items-center justify-center py-20">
-              <Text className="text-lg font-medium text-foreground">
-                No reels found
-              </Text>
-              <Text className="mt-1 text-sm text-muted-foreground">
+            <View style={tw`flex-1 items-center justify-center py-20`}>
+              <Text style={tw`text-lg font-medium text-foreground`}>No reels found</Text>
+              <Text style={tw`mt-1 text-sm text-muted-foreground`}>
                 Add accounts in Settings to start tracking.
               </Text>
             </View>

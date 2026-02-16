@@ -1,12 +1,49 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 /**
  * Get an authenticated Supabase client from the request cookies.
  * Returns the client and user, or an error response if not authenticated.
  */
-export async function getAuthenticatedClient() {
+export async function getAuthenticatedClient(request?: NextRequest) {
+  const authHeader = request?.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  // Mobile clients use Authorization header instead of cookies.
+  if (bearerToken) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${bearerToken}`,
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(bearerToken);
+
+    if (error || !user) {
+      return {
+        client: null,
+        user: null,
+        error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      };
+    }
+
+    return { client: supabase, user, error: null };
+  }
+
   const cookieStore = cookies();
 
   const supabase = createServerClient(

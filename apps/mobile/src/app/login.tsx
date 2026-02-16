@@ -9,32 +9,54 @@ import {
   Platform,
 } from "react-native";
 import { supabase } from "@/lib/supabase";
+import tw from "@/lib/tw";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
   async function handleSubmit() {
     if (!email || !password) return;
     setIsLoading(true);
     setError(null);
+    setSuccess(null);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+        });
         if (error) throw error;
+        if (!data.session) {
+          setSuccess(
+            "Account created. Check your email inbox for a confirmation link, then sign in."
+          );
+          setIsSignUp(false);
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (error) throw error;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      const message = err instanceof Error ? err.message : "Authentication failed";
+      if (message.toLowerCase().includes("email not confirmed")) {
+        setError(
+          "Your email is not confirmed yet. Open your inbox and click the Supabase confirmation link."
+        );
+      } else if (message.toLowerCase().includes("invalid login credentials")) {
+        setError("Invalid email or password. If you are new, tap Sign up first.");
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -43,28 +65,24 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-background"
+      style={tw`flex-1 bg-[#f3f4f6]`}
     >
-      <View className="flex-1 items-center justify-center px-6">
+      <View style={tw`flex-1 items-center justify-center px-6`}>
         {/* Logo */}
-        <View className="mb-8 items-center">
-          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-primary/20">
-            <Text className="text-3xl">🔥</Text>
+        <View style={tw`mb-8 items-center`}>
+          <View style={tw`mb-4 h-16 w-16 items-center justify-center rounded-full bg-[#ede9fe]`}>
+            <Text style={tw`text-3xl`}>🔥</Text>
           </View>
-          <Text className="text-2xl font-bold text-foreground">
-            ViralReelsAI
-          </Text>
-          <Text className="mt-1 text-sm text-muted-foreground">
+          <Text style={tw`text-2xl font-bold text-[#111827]`}>ViralReelsAI</Text>
+          <Text style={tw`mt-1 text-sm text-[#4b5563]`}>
             {isSignUp ? "Create your account" : "Sign in to continue"}
           </Text>
         </View>
 
         {/* Form */}
-        <View className="w-full max-w-sm space-y-4">
-          <View>
-            <Text className="mb-1 text-sm font-medium text-foreground">
-              Email
-            </Text>
+        <View style={tw`w-full rounded-2xl border border-[#e5e7eb] bg-white p-4`}>
+          <View style={tw`mb-4`}>
+            <Text style={tw`mb-1 text-sm font-medium text-[#111827]`}>Email</Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
@@ -74,14 +92,12 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
-              className="rounded-lg border border-border bg-card px-4 py-3 text-foreground"
+              style={tw`rounded-lg border border-[#d1d5db] bg-white px-4 py-3 text-[#111827]`}
             />
           </View>
 
-          <View>
-            <Text className="mb-1 text-sm font-medium text-foreground">
-              Password
-            </Text>
+          <View style={tw`mb-4`}>
+            <Text style={tw`mb-1 text-sm font-medium text-[#111827]`}>Password</Text>
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -89,26 +105,32 @@ export default function LoginScreen() {
               placeholderTextColor="#a1a1a1"
               secureTextEntry
               editable={!isLoading}
-              className="rounded-lg border border-border bg-card px-4 py-3 text-foreground"
+              style={tw`rounded-lg border border-[#d1d5db] bg-white px-4 py-3 text-[#111827]`}
             />
           </View>
 
+          {success && (
+            <View style={tw`mb-4 rounded-lg border border-green-200 bg-green-50 p-3`}>
+              <Text style={tw`text-sm text-green-700`}>{success}</Text>
+            </View>
+          )}
+
           {error && (
-            <View className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <Text className="text-sm text-red-400">{error}</Text>
+            <View style={tw`mb-4 rounded-lg border border-red-200 bg-red-50 p-3`}>
+              <Text style={tw`text-sm text-red-700`}>{error}</Text>
             </View>
           )}
 
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={isLoading}
-            className="items-center rounded-lg bg-primary px-4 py-3"
+            style={tw`items-center rounded-lg bg-primary px-4 py-3`}
             activeOpacity={0.8}
           >
             {isLoading ? (
               <ActivityIndicator color="#fafafa" />
             ) : (
-              <Text className="font-semibold text-white">
+              <Text style={tw`font-semibold text-white`}>
                 {isSignUp ? "Create Account" : "Sign In"}
               </Text>
             )}
@@ -118,12 +140,13 @@ export default function LoginScreen() {
             onPress={() => {
               setIsSignUp(!isSignUp);
               setError(null);
+              setSuccess(null);
             }}
-            className="items-center py-2"
+            style={tw`items-center py-3`}
           >
-            <Text className="text-sm text-muted-foreground">
+            <Text style={tw`text-sm text-[#4b5563]`}>
               {isSignUp ? "Already have an account? " : "Don't have an account? "}
-              <Text className="text-primary">
+              <Text style={tw`text-primary`}>
                 {isSignUp ? "Sign in" : "Sign up"}
               </Text>
             </Text>

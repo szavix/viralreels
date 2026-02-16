@@ -18,7 +18,7 @@ import { scrapeAccount, throttle, type ScrapeResult } from "@/services/apify";
  * or scrapes all active accounts if omitted.
  */
 export async function POST(request: NextRequest) {
-  const { error } = await getAuthenticatedClient();
+  const { error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   const startTime = Date.now();

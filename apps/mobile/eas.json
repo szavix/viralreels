@@ -1,0 +1,34 @@
+{
+  "cli": {
+    "version": ">= 18.0.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://chprzlsjjnrqyrxuviok.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocHJ6bHNqam5ycXlyeHV2aW9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExOTYyMDAsImV4cCI6MjA4Njc3MjIwMH0.m3ae3rK-aIQnRdhIqEl7SVdjmVcLRuMSUFIJKlJlD4Q",
+        "EXPO_PUBLIC_API_URL": "https://viralreels-web.vercel.app"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://chprzlsjjnrqyrxuviok.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocHJ6bHNqam5ycXlyeHV2aW9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExOTYyMDAsImV4cCI6MjA4Njc3MjIwMH0.m3ae3rK-aIQnRdhIqEl7SVdjmVcLRuMSUFIJKlJlD4Q",
+        "EXPO_PUBLIC_API_URL": "https://viralreels-web.vercel.app"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

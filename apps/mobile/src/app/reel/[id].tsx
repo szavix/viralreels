@@ -17,6 +17,7 @@ import {
   VIRAL_TIER_COLORS,
 } from "@viralreels/shared";
 import { supabase } from "@/lib/supabase";
+import tw from "@/lib/tw";
 
 const { width } = Dimensions.get("window");
 
@@ -49,7 +50,7 @@ export default function ReelDetailScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View style={tw`flex-1 items-center justify-center bg-background`}>
         <ActivityIndicator color="#8b5cf6" size="large" />
       </View>
     );
@@ -57,8 +58,8 @@ export default function ReelDetailScreen() {
 
   if (!reel) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <Text className="text-lg text-foreground">Reel not found</Text>
+      <View style={tw`flex-1 items-center justify-center bg-background`}>
+        <Text style={tw`text-lg text-foreground`}>Reel not found</Text>
       </View>
     );
   }
@@ -75,9 +76,9 @@ export default function ReelDetailScreen() {
     : null;
 
   return (
-    <ScrollView className="flex-1 bg-background">
+    <ScrollView style={tw`flex-1 bg-background`}>
       {/* Video player */}
-      <View style={{ width, height: width * (16 / 9), maxHeight: 500 }} className="bg-black">
+      <View style={[tw`bg-black`, { width, height: width * (16 / 9), maxHeight: 500 }]}>
         {reel.video_url ? (
           <Video
             ref={videoRef}
@@ -90,45 +91,44 @@ export default function ReelDetailScreen() {
             style={{ width: "100%", height: "100%" }}
           />
         ) : (
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-white">Video not available</Text>
+          <View style={tw`flex-1 items-center justify-center`}>
+            <Text style={tw`text-white`}>Video not available</Text>
           </View>
         )}
       </View>
 
-      <View className="p-4 space-y-4">
+      <View style={tw`p-4`}>
         {/* Author & score */}
-        <View className="flex-row items-center justify-between">
+        <View style={tw`flex-row items-center justify-between mb-4`}>
           <View>
-            <Text className="text-lg font-bold text-foreground">
+            <Text style={tw`text-lg font-bold text-foreground`}>
               @{reel.author_username}
             </Text>
             {reel.author_full_name && (
-              <Text className="text-sm text-muted-foreground">
+              <Text style={tw`text-sm text-muted-foreground`}>
                 {reel.author_full_name}
               </Text>
             )}
           </View>
-          <View className="flex-row items-center space-x-2">
-            <View className="flex-row items-center rounded-full bg-black/40 px-3 py-1.5 border border-border">
+          <View style={tw`flex-row items-center`}>
+            <View style={tw`flex-row items-center rounded-full bg-black/40 px-3 py-1.5 border border-border mr-2`}>
               <View
-                className="mr-1.5 h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: VIRAL_TIER_COLORS[tier] }}
+                style={[tw`mr-1.5 h-2.5 w-2.5 rounded-full`, { backgroundColor: VIRAL_TIER_COLORS[tier] }]}
               />
-              <Text className="text-sm font-bold text-foreground">
+              <Text style={tw`text-sm font-bold text-foreground`}>
                 {(reel.viral_score * 100).toFixed(1)}%
               </Text>
             </View>
             {reel.is_rising_star && (
-              <View className="rounded-full bg-amber-500/90 px-3 py-1.5">
-                <Text className="text-xs font-bold text-white">⚡ Rising</Text>
+              <View style={tw`rounded-full bg-amber-500 px-3 py-1.5`}>
+                <Text style={tw`text-xs font-bold text-white`}>⚡ Rising</Text>
               </View>
             )}
           </View>
         </View>
 
         {/* Stats grid */}
-        <View className="flex-row justify-between">
+        <View style={tw`flex-row justify-between mb-4`}>
           <StatBox label="Views" value={formatCount(reel.view_count)} emoji="👁" />
           <StatBox label="Likes" value={formatCount(reel.like_count)} emoji="❤️" />
           <StatBox label="Comments" value={formatCount(reel.comment_count)} emoji="💬" />
@@ -137,11 +137,11 @@ export default function ReelDetailScreen() {
 
         {/* Caption */}
         {reel.description && (
-          <View>
-            <Text className="mb-1 text-sm font-medium text-foreground">
+          <View style={tw`mb-4`}>
+            <Text style={tw`mb-1 text-sm font-medium text-foreground`}>
               Caption
             </Text>
-            <Text className="text-sm text-muted-foreground">
+            <Text style={tw`text-sm text-muted-foreground`}>
               {reel.description}
             </Text>
           </View>
@@ -149,23 +149,23 @@ export default function ReelDetailScreen() {
 
         {/* Audio */}
         {reel.audio_track && (
-          <View className="rounded-lg border border-border bg-card p-3">
-            <Text className="text-sm font-medium text-foreground">
+          <View style={tw`mb-4 rounded-lg border border-border bg-card p-3`}>
+            <Text style={tw`text-sm font-medium text-foreground`}>
               🎵 {reel.audio_track}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text style={tw`text-xs text-muted-foreground`}>
               {reel.is_original_audio ? "Original Audio" : "Trending Audio"}
             </Text>
           </View>
         )}
 
         {/* Meta */}
-        <View className="flex-row flex-wrap items-center space-x-4">
-          <Text className="text-xs text-muted-foreground">
+        <View style={tw`flex-row flex-wrap items-center mb-4`}>
+          <Text style={tw`text-xs text-muted-foreground mr-4`}>
             📅 {postedDate}
           </Text>
           {duration && (
-            <Text className="text-xs text-muted-foreground">
+            <Text style={tw`text-xs text-muted-foreground`}>
               ⏱ {duration}
             </Text>
           )}
@@ -174,10 +174,10 @@ export default function ReelDetailScreen() {
         {/* Open on Instagram */}
         <TouchableOpacity
           onPress={() => Linking.openURL(reel.url)}
-          className="items-center rounded-lg bg-primary py-3"
+          style={tw`items-center rounded-lg bg-primary py-3 mb-6`}
           activeOpacity={0.8}
         >
-          <Text className="font-semibold text-white">Open on Instagram</Text>
+          <Text style={tw`font-semibold text-white`}>Open on Instagram</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -194,10 +194,10 @@ function StatBox({
   emoji: string;
 }) {
   return (
-    <View className="flex-1 items-center rounded-lg border border-border bg-card mx-1 py-3">
-      <Text className="text-base">{emoji}</Text>
-      <Text className="mt-1 text-lg font-bold text-foreground">{value}</Text>
-      <Text className="text-xs text-muted-foreground">{label}</Text>
+    <View style={tw`flex-1 items-center rounded-lg border border-border bg-card mx-1 py-3`}>
+      <Text style={tw`text-base`}>{emoji}</Text>
+      <Text style={tw`mt-1 text-lg font-bold text-foreground`}>{value}</Text>
+      <Text style={tw`text-xs text-muted-foreground`}>{label}</Text>
     </View>
   );
 }

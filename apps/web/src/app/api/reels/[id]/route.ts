@@ -8,10 +8,10 @@ import { fetchReelById } from "@viralreels/supabase";
  * Fetch a single reel by its UUID.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { client, error } = await getAuthenticatedClient();
+  const { client, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
   try {

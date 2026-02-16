@@ -20,6 +20,7 @@ import {
 } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
+import tw from "@/lib/tw";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -96,15 +97,13 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={tw`flex-1 bg-background`}>
       {/* Add account */}
-      <View className="border-b border-border p-4">
-        <Text className="mb-2 text-lg font-bold text-foreground">
-          Add Account
-        </Text>
-        <View className="flex-row items-center space-x-2">
-          <View className="flex-1 flex-row items-center rounded-lg border border-border bg-card px-3">
-            <Text className="mr-1 text-muted-foreground">@</Text>
+      <View style={tw`border-b border-border p-4`}>
+        <Text style={tw`mb-2 text-lg font-bold text-foreground`}>Add Account</Text>
+        <View style={tw`flex-row items-center`}>
+          <View style={tw`flex-1 flex-row items-center rounded-lg border border-border bg-card px-3`}>
+            <Text style={tw`mr-1 text-muted-foreground`}>@</Text>
             <TextInput
               value={newUsername}
               onChangeText={setNewUsername}
@@ -112,7 +111,7 @@ export default function SettingsScreen() {
               placeholderTextColor="#a1a1a1"
               autoCapitalize="none"
               autoCorrect={false}
-              className="flex-1 py-3 text-foreground"
+              style={tw`flex-1 py-3 text-foreground`}
               editable={!isAdding}
               onSubmitEditing={handleAdd}
             />
@@ -120,14 +119,12 @@ export default function SettingsScreen() {
           <TouchableOpacity
             onPress={handleAdd}
             disabled={isAdding || !newUsername.trim()}
-            className={`rounded-lg px-4 py-3 ${
-              isAdding || !newUsername.trim() ? "bg-muted" : "bg-primary"
-            }`}
+            style={tw`ml-2 rounded-lg px-4 py-3 ${isAdding || !newUsername.trim() ? "bg-muted" : "bg-primary"}`}
           >
             {isAdding ? (
               <ActivityIndicator color="#fafafa" size="small" />
             ) : (
-              <Text className="font-semibold text-white">Add</Text>
+              <Text style={tw`font-semibold text-white`}>Add</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -135,7 +132,7 @@ export default function SettingsScreen() {
 
       {/* Account list */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
+        <View style={tw`flex-1 items-center justify-center`}>
           <ActivityIndicator color="#8b5cf6" size="large" />
         </View>
       ) : (
@@ -144,25 +141,23 @@ export default function SettingsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 100 }}
           ListEmptyComponent={
-            <View className="items-center py-20">
-              <Text className="text-lg font-medium text-foreground">
-                No accounts yet
-              </Text>
-              <Text className="mt-1 text-sm text-muted-foreground">
+            <View style={tw`items-center py-20`}>
+              <Text style={tw`text-lg font-medium text-foreground`}>No accounts yet</Text>
+              <Text style={tw`mt-1 text-sm text-muted-foreground`}>
                 Add a username above to start tracking.
               </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-              <View className="flex-1 flex-row items-center">
+            <View style={tw`flex-row items-center justify-between border-b border-border px-4 py-4`}>
+              <View style={tw`flex-1 flex-row items-center`}>
                 <Switch
                   value={item.active}
                   onValueChange={(value) => handleToggle(item.id, value)}
                   trackColor={{ false: "#262626", true: "#8b5cf6" }}
                   thumbColor="#fafafa"
                 />
-                <View className="ml-3 flex-row items-center">
+                <View style={tw`ml-3 flex-row items-center`}>
                   {item.profile_pic_url ? (
                     <Image
                       source={{ uri: item.profile_pic_url }}
@@ -170,17 +165,19 @@ export default function SettingsScreen() {
                     />
                   ) : (
                     <View
-                      style={{ width: 36, height: 36, borderRadius: 18 }}
-                      className="items-center justify-center bg-muted"
+                      style={[
+                        tw`items-center justify-center bg-muted`,
+                        { width: 36, height: 36, borderRadius: 18 },
+                      ]}
                     >
-                      <Text className="text-sm text-muted-foreground">@</Text>
+                      <Text style={tw`text-sm text-muted-foreground`}>@</Text>
                     </View>
                   )}
-                  <View className="ml-2">
-                    <Text className="text-sm font-medium text-foreground">
+                  <View style={tw`ml-2`}>
+                    <Text style={tw`text-sm font-medium text-foreground`}>
                       @{item.username}
                     </Text>
-                    <Text className="text-xs text-muted-foreground">
+                    <Text style={tw`text-xs text-muted-foreground`}>
                       {item.active ? "Active" : "Paused"}
                       {item.follower_count != null &&
                         ` · ${formatCount(item.follower_count)} followers`}
@@ -190,22 +187,22 @@ export default function SettingsScreen() {
               </View>
               <TouchableOpacity
                 onPress={() => handleDelete(item.id, item.username)}
-                className="rounded-lg p-2"
+                style={tw`rounded-lg p-2`}
               >
-                <Text className="text-destructive text-sm">Delete</Text>
+                <Text style={tw`text-sm text-red-500`}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
         />
       )}
 
-      {/* Logout button */}
-      <View className="border-t border-border p-4">
+      {/* Logout */}
+      <View style={tw`border-t border-border p-4`}>
         <TouchableOpacity
           onPress={handleLogout}
-          className="items-center rounded-lg border border-border py-3"
+          style={tw`items-center rounded-lg border border-border py-3`}
         >
-          <Text className="font-medium text-muted-foreground">Sign Out</Text>
+          <Text style={tw`font-medium text-muted-foreground`}>Sign Out</Text>
         </TouchableOpacity>
       </View>
     </View>
