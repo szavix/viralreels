@@ -4,29 +4,39 @@ import { supabase } from "./supabase";
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL!;
 const REQUEST_TIMEOUT_MS = 12000;
 
+interface ApiFetchOptions extends RequestInit {
+  /** Timeout in ms. Set to 0 to disable. Defaults to REQUEST_TIMEOUT_MS. */
+  timeoutMs?: number;
+}
+
 /**
  * Helper to make authenticated API calls to the Next.js backend.
  */
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, options?: ApiFetchOptions): Promise<T> {
   if (!API_BASE_URL) {
     throw new Error("Missing EXPO_PUBLIC_API_URL in apps/mobile/.env");
   }
 
+  const timeout = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = timeout > 0
+    ? setTimeout(() => controller.abort(), timeout)
+    : null;
 
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   try {
+    const { timeoutMs: _, ...fetchOptions } = options ?? {};
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
-      signal: controller.signal,
+      ...fetchOptions,
+      signal: timeout > 0 ? controller.signal : undefined,
       headers: {
         "Content-Type": "application/json",
         Authorization: session ? `Bearer ${session.access_token}` : "",
-        ...options?.headers,
+        ...fetchOptions?.headers,
       },
     });
 
@@ -40,7 +50,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("Aborted")) {
       throw new Error(
-        `Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s. Check EXPO_PUBLIC_API_URL (${API_BASE_URL}) and ensure the backend is reachable from your phone.`
+        `Request timed out after ${timeout / 1000}s. Check EXPO_PUBLIC_API_URL (${API_BASE_URL}) and ensure the backend is reachable from your phone.`
       );
     }
     if (message.toLowerCase().includes("network request failed")) {
@@ -50,7 +60,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     }
     throw error;
   } finally {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 
@@ -119,5 +129,6 @@ export async function triggerScrape(accountId?: string): Promise<ScrapeResponse>
   return apiFetch<ScrapeResponse>("/api/scrape", {
     method: "POST",
     body: JSON.stringify(accountId ? { accountId } : {}),
+    timeoutMs: 0,
   });
 }
