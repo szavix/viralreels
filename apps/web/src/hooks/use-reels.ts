@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Reel, Account, FilterOption } from "@viralreels/shared";
+import type { Reel, Account, Category, FilterOption, ReelSortOption } from "@viralreels/shared";
 
 interface UseReelsResult {
   reels: Reel[];
@@ -17,10 +17,12 @@ interface UseReelsResult {
 interface UseReelsOptions {
   filter: FilterOption;
   accountId: string | null;
+  categoryIds: string[];
+  sortBy: ReelSortOption;
   pageSize?: number;
 }
 
-export function useReels({ filter, accountId, pageSize = 24 }: UseReelsOptions): UseReelsResult {
+export function useReels({ filter, accountId, categoryIds, sortBy, pageSize = 24 }: UseReelsOptions): UseReelsResult {
   const [reels, setReels] = useState<Reel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,10 @@ export function useReels({ filter, accountId, pageSize = 24 }: UseReelsOptions):
       if (accountId) {
         params.set("accountId", accountId);
       }
+      if (categoryIds.length > 0) {
+        params.set("categoryIds", categoryIds.join(","));
+      }
+      params.set("sortBy", sortBy);
 
       const response = await fetch(`/api/reels?${params}`);
 
@@ -59,7 +65,7 @@ export function useReels({ filter, accountId, pageSize = 24 }: UseReelsOptions):
     } finally {
       setIsLoading(false);
     }
-  }, [filter, accountId, page, pageSize]);
+  }, [filter, accountId, categoryIds, sortBy, page, pageSize]);
 
   useEffect(() => {
     fetchData();
@@ -68,7 +74,7 @@ export function useReels({ filter, accountId, pageSize = 24 }: UseReelsOptions):
   // Reset page when filter changes
   useEffect(() => {
     setPage(1);
-  }, [filter, accountId]);
+  }, [filter, accountId, categoryIds, sortBy]);
 
   return {
     reels,
@@ -105,4 +111,29 @@ export function useAccounts() {
   }, []);
 
   return { accounts, isLoading };
+}
+
+export function useCategories() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await fetch("/api/categories");
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        }
+      } catch {
+        // Silently fail; category selector just won't populate
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchCategories();
+  }, []);
+
+  return { categories, isLoading };
 }

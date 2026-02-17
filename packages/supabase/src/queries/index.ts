@@ -17,3 +17,11 @@ export {
   updateAccountProfile,
   deleteAccount,
 } from "./accounts";
+
+export {
+  fetchCategories,
+  createCategory,
+  deleteCategory,
+  fetchAccountCategoryLinks,
+  replaceAccountCategories,
+} from "./categories";

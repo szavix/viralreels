@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Reel, FilterOption } from "@viralreels/shared";
-import { useReels, useAccounts } from "@/hooks/use-reels";
+import type { Reel, FilterOption, ReelSortOption } from "@viralreels/shared";
+import { useReels, useAccounts, useCategories } from "@/hooks/use-reels";
 import { FilterBar } from "@/components/filter-bar";
 import { AccountSelector } from "@/components/account-selector";
+import { CategorySelector } from "@/components/category-selector";
 import { ReelGrid } from "@/components/reel-grid";
 import { ReelModal } from "@/components/reel-modal";
 import { Pagination } from "@/components/pagination";
@@ -14,15 +15,20 @@ import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const [filter, setFilter] = useState<FilterOption>("all");
+  const [sortBy, setSortBy] = useState<ReelSortOption>("virality");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedReel, setSelectedReel] = useState<Reel | null>(null);
   const [isScraping, setIsScraping] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const { accounts } = useAccounts();
+  const { categories } = useCategories();
   const { reels, isLoading, page, totalPages, total, setPage, refetch } = useReels({
     filter,
+    sortBy,
     accountId: selectedAccountId,
+    categoryIds: selectedCategoryIds,
   });
 
   async function handleScrapeNow() {
@@ -115,7 +121,17 @@ export default function DashboardPage() {
       )}
 
       {/* Filters */}
-      <FilterBar activeFilter={filter} onFilterChange={setFilter} />
+      <FilterBar
+        activeFilter={filter}
+        onFilterChange={setFilter}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+      />
+      <CategorySelector
+        categories={categories}
+        selectedCategoryIds={selectedCategoryIds}
+        onSelectionChange={setSelectedCategoryIds}
+      />
 
       {/* Grid */}
       <ReelGrid

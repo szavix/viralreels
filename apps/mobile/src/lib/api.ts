@@ -1,4 +1,4 @@
-import type { Reel, Account, FilterOption } from "@viralreels/shared";
+import type { Reel, Account, Category, FilterOption, ReelSortOption } from "@viralreels/shared";
 import { supabase } from "./supabase";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL!;
@@ -75,6 +75,8 @@ export interface ReelsResponse {
 export async function fetchReels(options: {
   filter?: FilterOption;
   accountId?: string;
+  categoryIds?: string[];
+  sortBy?: ReelSortOption;
   page?: number;
 }): Promise<ReelsResponse> {
   const params = new URLSearchParams({
@@ -85,6 +87,12 @@ export async function fetchReels(options: {
 
   if (options.accountId) {
     params.set("accountId", options.accountId);
+  }
+  if (options.categoryIds && options.categoryIds.length > 0) {
+    params.set("categoryIds", [...new Set(options.categoryIds)].join(","));
+  }
+  if (options.sortBy) {
+    params.set("sortBy", options.sortBy);
   }
 
   return apiFetch<ReelsResponse>(`/api/reels?${params}`);
@@ -110,6 +118,42 @@ export async function toggleAccount(id: string, active: boolean): Promise<Accoun
 
 export async function deleteAccount(id: string): Promise<void> {
   await apiFetch(`/api/accounts/${id}`, { method: "DELETE" });
+}
+
+export async function fetchCategories(): Promise<Category[]> {
+  return apiFetch<Category[]>("/api/categories");
+}
+
+export async function addCategory(name: string): Promise<Category> {
+  return apiFetch<Category>("/api/categories", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await apiFetch(`/api/categories/${id}`, { method: "DELETE" });
+}
+
+export async function fetchAccountCategories(accountId: string): Promise<string[]> {
+  const data = await apiFetch<{ accountId: string; categoryIds: string[] }>(
+    `/api/accounts/${accountId}/categories`
+  );
+  return data.categoryIds ?? [];
+}
+
+export async function updateAccountCategories(
+  accountId: string,
+  categoryIds: string[]
+): Promise<string[]> {
+  const data = await apiFetch<{ accountId: string; categoryIds: string[] }>(
+    `/api/accounts/${accountId}/categories`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ categoryIds }),
+    }
+  );
+  return data.categoryIds ?? [];
 }
 
 export interface ScrapeResponse {

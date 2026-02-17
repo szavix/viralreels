@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Reel, ReelInsert, FilterOption } from "@viralreels/shared";
+import type { Reel, ReelInsert, FilterOption, ReelSortOption } from "@viralreels/shared";
 import { REELS_PAGE_SIZE } from "@viralreels/shared";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8,6 +8,8 @@ type Client = SupabaseClient<any>;
 export interface FetchReelsOptions {
   filter?: FilterOption;
   accountId?: string;
+  categoryIds?: string[];
+  sortBy?: ReelSortOption;
   page?: number;
   pageSize?: number;
   search?: string;
@@ -20,6 +22,8 @@ export async function fetchReels(client: Client, options: FetchReelsOptions = {}
   const {
     filter = "all",
     accountId,
+    categoryIds,
+    sortBy = "virality",
     page = 1,
     pageSize = REELS_PAGE_SIZE,
     search,
@@ -27,6 +31,30 @@ export async function fetchReels(client: Client, options: FetchReelsOptions = {}
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
+  const normalizedCategoryIds = [...new Set((categoryIds ?? []).filter(Boolean))];
+  let categoryAccountIds: string[] | null = null;
+
+  if (normalizedCategoryIds.length > 0) {
+    const { data: mappingRows, error: mappingError } = await client
+      .from("account_categories")
+      .select("account_id")
+      .in("category_id", normalizedCategoryIds);
+
+    if (mappingError) throw mappingError;
+
+    categoryAccountIds = [...new Set((mappingRows ?? []).map((row) => row.account_id))];
+
+    // No accounts map to these categories, so no reels can match.
+    if (categoryAccountIds.length === 0) {
+      return {
+        reels: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      };
+    }
+  }
 
   let query = client
     .from("reels")
@@ -35,6 +63,11 @@ export async function fetchReels(client: Client, options: FetchReelsOptions = {}
   // Apply account filter via junction table
   if (accountId) {
     query = query.eq("reel_accounts.account_id", accountId);
+  }
+
+  // Apply category filter via account_categories (ANY selected category)
+  if (categoryAccountIds) {
+    query = query.in("reel_accounts.account_id", categoryAccountIds);
   }
 
   // Apply filter presets
@@ -57,9 +90,16 @@ export async function fetchReels(client: Client, options: FetchReelsOptions = {}
     query = query.ilike("description", `%${search}%`);
   }
 
-  // Sort by viral score descending, then by posted_at
+  // Sort descending by selected metric, then posted_at for stable ranking.
+  const sortColumnByOption: Record<ReelSortOption, keyof Reel> = {
+    virality: "viral_score",
+    views: "view_count",
+    shares: "share_count",
+    comments: "comment_count",
+  };
+
   query = query
-    .order("viral_score", { ascending: false })
+    .order(sortColumnByOption[sortBy], { ascending: false })
     .order("posted_at", { ascending: false })
     .range(from, to);
 

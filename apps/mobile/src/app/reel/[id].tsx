@@ -130,7 +130,7 @@ export default function ReelDetailScreen() {
                 style={[tw`mr-1.5 h-2.5 w-2.5 rounded-full`, { backgroundColor: VIRAL_TIER_COLORS[tier] }]}
               />
               <Text style={tw`text-sm font-bold text-foreground`}>
-                {(reel.viral_score * 100).toFixed(1)}%
+                {reel.viral_score.toFixed(1)}%
               </Text>
             </View>
             {reel.is_rising_star && (

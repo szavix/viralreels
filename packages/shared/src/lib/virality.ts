@@ -5,25 +5,6 @@ import {
 } from "../constants";
 
 /**
- * Calculate virality score for a reel using the real formula.
- *
- * Formula: (Likes + Comments) / FollowerCount
- * Measures engagement relative to the creator's audience size.
- * Falls back to (Likes + Comments) / Views if followerCount is unavailable.
- */
-export function calculateViralScore(
-  views: number,
-  likes: number,
-  comments: number,
-  followerCount?: number
-): number {
-  const denominator = followerCount && followerCount > 0 ? followerCount : views;
-  if (denominator <= 0) return 0;
-  const raw = (likes + comments) / denominator;
-  return Math.round(raw * 10000) / 10000;
-}
-
-/**
  * Determine if a reel qualifies as a "Rising Star".
  *
  * Criteria: posted less than 48 hours ago AND > 100k views.

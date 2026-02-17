@@ -15,6 +15,10 @@ export type {
   ReelInsert,
   ReelUpdate,
   ReelAccount,
+  Category,
+  CategoryInsert,
+  CategoryUpdate,
+  AccountCategory,
   ReelWithAccounts,
   Database,
 } from "./database";

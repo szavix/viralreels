@@ -4,13 +4,12 @@ export const RISING_STAR_VIEW_THRESHOLD = 100_000;
 
 /**
  * Viral score tier thresholds.
- * With the real formula (Likes + Comments) / FollowerCount,
- * typical values are higher than the old engagement-rate proxy.
+ * Scores are on a strict 0..100 scale.
  */
 export const VIRAL_SCORE_THRESHOLDS = {
-  hot: 0.1,
-  warm: 0.05,
-  mild: 0.02,
+  hot: 10,
+  warm: 5,
+  mild: 2,
 } as const;
 
 /** Colors for viral score tiers */
@@ -42,3 +41,13 @@ export const FILTER_OPTIONS = {
 } as const;
 
 export type FilterOption = keyof typeof FILTER_OPTIONS;
+
+/** Sort options for reel ranking */
+export const REEL_SORT_OPTIONS = {
+  virality: "Virality",
+  views: "Views",
+  shares: "Shares",
+  comments: "Comments",
+} as const;
+
+export type ReelSortOption = keyof typeof REEL_SORT_OPTIONS;

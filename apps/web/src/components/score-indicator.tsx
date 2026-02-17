@@ -35,7 +35,7 @@ export function ScoreIndicator({ score, className }: ScoreIndicatorProps) {
         className="h-1.5 w-1.5 rounded-full"
         style={{ backgroundColor: VIRAL_TIER_COLORS[tier] }}
       />
-      {tierLabel} {(score * 100).toFixed(1)}%
+      {tierLabel} {score.toFixed(1)}%
     </div>
   );
 }

@@ -11,9 +11,15 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import type { Reel, FilterOption } from "@viralreels/shared";
-import { formatCount, getViralTier, VIRAL_TIER_COLORS, FILTER_OPTIONS } from "@viralreels/shared";
-import { fetchReels, triggerScrape } from "@/lib/api";
+import type { Reel, Category, FilterOption, ReelSortOption } from "@viralreels/shared";
+import {
+  formatCount,
+  getViralTier,
+  VIRAL_TIER_COLORS,
+  FILTER_OPTIONS,
+  REEL_SORT_OPTIONS,
+} from "@viralreels/shared";
+import { fetchReels, fetchCategories, triggerScrape } from "@/lib/api";
 import tw from "@/lib/tw";
 
 const { width } = Dimensions.get("window");
@@ -28,13 +34,33 @@ export default function DashboardScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [filter, setFilter] = useState<FilterOption>("all");
+  const [sortBy, setSortBy] = useState<ReelSortOption>("virality");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await fetchCategories();
+        setCategories(data);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+      }
+    }
+    void loadCategories();
+  }, []);
 
   const loadReels = useCallback(
     async (pageNum: number, refresh = false) => {
       try {
-        const data = await fetchReels({ filter, page: pageNum });
+        const data = await fetchReels({
+          filter,
+          sortBy,
+          page: pageNum,
+          categoryIds: selectedCategoryIds,
+        });
         if (refresh || pageNum === 1) {
           setReels(data.reels);
         } else {
@@ -48,14 +74,22 @@ export default function DashboardScreen() {
         setIsRefreshing(false);
       }
     },
-    [filter]
+    [filter, sortBy, selectedCategoryIds]
   );
 
   useEffect(() => {
     setIsLoading(true);
     setPage(1);
     loadReels(1, true);
-  }, [filter, loadReels]);
+  }, [filter, sortBy, selectedCategoryIds, loadReels]);
+
+  function toggleCategory(categoryId: string) {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  }
 
   function handleRefresh() {
     setIsRefreshing(true);
@@ -114,7 +148,7 @@ export default function DashboardScreen() {
           <View style={tw`absolute left-2 top-2 flex-row items-center rounded-full bg-black/60 px-2 py-1`}>
             <View style={[tw`mr-1 h-2 w-2 rounded-full`, { backgroundColor: VIRAL_TIER_COLORS[tier] }]} />
             <Text style={tw`text-xs font-bold text-white`}>
-              {(item.viral_score * 100).toFixed(1)}%
+              {item.viral_score.toFixed(1)}%
             </Text>
           </View>
 
@@ -176,6 +210,61 @@ export default function DashboardScreen() {
               style={tw`mr-2 rounded-full px-4 py-2 ${filter === key ? "bg-primary" : "bg-muted"}`}
             >
               <Text style={tw`text-sm font-medium ${filter === key ? "text-white" : "text-muted-foreground"}`}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
+      {/* Category filter */}
+      {categories.length > 0 && (
+        <View style={tw`border-b border-border px-2 py-2`}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={categories}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              const selected = selectedCategoryIds.includes(item.id);
+              return (
+                <TouchableOpacity
+                  onPress={() => toggleCategory(item.id)}
+                  style={tw`mr-2 rounded-full px-4 py-2 ${selected ? "bg-primary" : "bg-muted"}`}
+                >
+                  <Text style={tw`text-sm font-medium ${selected ? "text-white" : "text-muted-foreground"}`}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+            ListFooterComponent={
+              selectedCategoryIds.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => setSelectedCategoryIds([])}
+                  style={tw`rounded-full bg-muted px-3 py-2`}
+                >
+                  <Text style={tw`text-xs text-muted-foreground`}>Clear</Text>
+                </TouchableOpacity>
+              ) : null
+            }
+          />
+        </View>
+      )}
+
+      {/* Sort buttons */}
+      <View style={tw`border-b border-border px-2 py-2`}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={Object.entries(REEL_SORT_OPTIONS) as [ReelSortOption, string][]}
+          keyExtractor={([key]) => key}
+          renderItem={({ item: [key, label] }) => (
+            <TouchableOpacity
+              onPress={() => setSortBy(key)}
+              style={tw`mr-2 rounded-full px-4 py-2 ${sortBy === key ? "bg-primary" : "bg-muted"}`}
+            >
+              <Text style={tw`text-sm font-medium ${sortBy === key ? "text-white" : "text-muted-foreground"}`}>
                 {label}
               </Text>
             </TouchableOpacity>

@@ -42,6 +42,17 @@ export interface ReelAccount {
   account_id: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface AccountCategory {
+  account_id: string;
+  category_id: string;
+}
+
 /** Insert types (omit auto-generated fields) */
 export type AccountInsert = Omit<Account, "id" | "created_at"> & {
   id?: string;
@@ -53,9 +64,15 @@ export type ReelInsert = Omit<Reel, "id" | "scraped_at"> & {
   scraped_at?: string;
 };
 
+export type CategoryInsert = Omit<Category, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
+
 /** Update types (all fields optional except id) */
 export type AccountUpdate = Partial<Omit<Account, "id">> & { id: string };
 export type ReelUpdate = Partial<Omit<Reel, "id">> & { id: string };
+export type CategoryUpdate = Partial<Omit<Category, "id">> & { id: string };
 
 /** Reel with associated accounts for API responses */
 export interface ReelWithAccounts extends Reel {
@@ -80,6 +97,16 @@ export interface Database {
         Row: ReelAccount;
         Insert: ReelAccount;
         Update: Partial<ReelAccount>;
+      };
+      categories: {
+        Row: Category;
+        Insert: CategoryInsert;
+        Update: Partial<CategoryInsert>;
+      };
+      account_categories: {
+        Row: AccountCategory;
+        Insert: AccountCategory;
+        Update: Partial<AccountCategory>;
       };
     };
   };

@@ -7,7 +7,7 @@ import type {
 } from "@viralreels/shared";
 import {
   isReelResult,
-  calculateViralScore,
+  calculateViralityScores,
   isRisingStar,
   APIFY_PROFILE_SCRAPER_ACTOR,
   APIFY_CALL_DELAY_MS,
@@ -76,13 +76,12 @@ async function runProfileScraper(
  */
 function mapApifyResultToReel(
   item: ApifyReelResult,
-  followerCount: number
+  followerCount: number,
+  viralScore: number
 ): ReelInsert {
   const views = item.videoPlayCount ?? item.videoViewCount ?? item.igPlayCount ?? 0;
   const likes = item.likesCount >= 0 ? item.likesCount : 0;
   const comments = item.commentsCount ?? 0;
-
-  const viralScore = calculateViralScore(views, likes, comments, followerCount);
 
   const postedAt = item.timestamp ? new Date(item.timestamp) : null;
   const rising = postedAt ? isRisingStar(postedAt, views) : false;
@@ -165,8 +164,27 @@ export async function scrapeAccount(account: Account): Promise<ScrapeResult> {
 
     const latestPosts = profile.latestPosts ?? [];
     const reelResults = latestPosts.filter(isReelResult);
-    const mappedReels = reelResults.map((item) =>
-      mapApifyResultToReel(item, followerCount)
+    const last10ReelsViews = reelResults
+      .slice(0, 10)
+      .map((item) => item.videoPlayCount ?? item.videoViewCount ?? item.igPlayCount ?? 0);
+
+    const scoringInputs = reelResults.map((item) => {
+      const views = item.videoPlayCount ?? item.videoViewCount ?? item.igPlayCount ?? 0;
+      return {
+        follower_count: followerCount,
+        views,
+        likes: item.likesCount >= 0 ? item.likesCount : 0,
+        comments: item.commentsCount ?? 0,
+        shares: item.reshareCount ?? 0,
+        date_posted: item.timestamp,
+        // Daily snapshots are not available in current scraper payload.
+        daily_views_history: [],
+        last_10_reels_views: last10ReelsViews,
+      };
+    });
+    const scoredReels = calculateViralityScores(scoringInputs);
+    const mappedReels = reelResults.map((item, idx) =>
+      mapApifyResultToReel(item, followerCount, scoredReels[idx]?.viral_score ?? 0)
     );
 
     return {
