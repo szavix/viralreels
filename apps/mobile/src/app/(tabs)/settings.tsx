@@ -183,17 +183,10 @@ export default function SettingsScreen() {
 
   async function handleOpenInstagram(username: string) {
     const normalized = username.replace(/^@/, "").trim();
-    const appUrl = `instagram://user?username=${normalized}`;
     const webUrl = `https://www.instagram.com/${normalized}/`;
 
     try {
-      // canOpenURL is unreliable in some Android preview builds.
-      // Try app deep link first, then fall back to web profile URL.
-      try {
-        await Linking.openURL(appUrl);
-      } catch {
-        await Linking.openURL(webUrl);
-      }
+      await Linking.openURL(webUrl);
     } catch {
       Alert.alert("Error", "Failed to open Instagram profile.");
     }
@@ -291,7 +284,11 @@ export default function SettingsScreen() {
                   trackColor={{ false: "#262626", true: "#8b5cf6" }}
                   thumbColor="#fafafa"
                 />
-                <View style={tw`ml-3 flex-row items-center`}>
+                <TouchableOpacity
+                  style={tw`ml-3 flex-row items-center`}
+                  onPress={() => handleOpenInstagram(item.username)}
+                  activeOpacity={0.7}
+                >
                   {item.profile_pic_url ? (
                     <Image
                       source={{ uri: item.profile_pic_url }}
@@ -308,11 +305,9 @@ export default function SettingsScreen() {
                     </View>
                   )}
                   <View style={tw`ml-2`}>
-                    <TouchableOpacity onPress={() => handleOpenInstagram(item.username)}>
-                      <Text style={tw`text-sm font-medium text-foreground underline`}>
-                        @{item.username}
-                      </Text>
-                    </TouchableOpacity>
+                    <Text style={tw`text-sm font-medium text-foreground underline`}>
+                      @{item.username}
+                    </Text>
                     <Text style={tw`text-xs text-muted-foreground`}>
                       {item.active ? "Active" : "Paused"}
                       {item.follower_count != null &&
@@ -335,7 +330,7 @@ export default function SettingsScreen() {
                       })}
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
               <TouchableOpacity
                 onPress={() => handleDelete(item.id, item.username)}
