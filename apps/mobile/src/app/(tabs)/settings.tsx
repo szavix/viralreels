@@ -182,14 +182,18 @@ export default function SettingsScreen() {
   }
 
   async function handleOpenInstagram(username: string) {
-    const url = `https://www.instagram.com/${username}/`;
+    const normalized = username.replace(/^@/, "").trim();
+    const appUrl = `instagram://user?username=${normalized}`;
+    const webUrl = `https://www.instagram.com/${normalized}/`;
+
     try {
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) {
-        Alert.alert("Unavailable", "Cannot open Instagram profile link.");
-        return;
+      // canOpenURL is unreliable in some Android preview builds.
+      // Try app deep link first, then fall back to web profile URL.
+      try {
+        await Linking.openURL(appUrl);
+      } catch {
+        await Linking.openURL(webUrl);
       }
-      await Linking.openURL(url);
     } catch {
       Alert.alert("Error", "Failed to open Instagram profile.");
     }
