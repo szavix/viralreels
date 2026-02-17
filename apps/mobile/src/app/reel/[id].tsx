@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
@@ -74,6 +75,19 @@ export default function ReelDetailScreen() {
         .toString()
         .padStart(2, "0")}`
     : null;
+
+  async function handleDownload() {
+    if (!reel?.video_url) {
+      Alert.alert("Unavailable", "This reel does not have a downloadable video URL.");
+      return;
+    }
+
+    try {
+      await Linking.openURL(reel.video_url);
+    } catch {
+      Alert.alert("Download failed", "Could not open the video download link.");
+    }
+  }
 
   return (
     <ScrollView style={tw`flex-1 bg-background`}>
@@ -171,7 +185,15 @@ export default function ReelDetailScreen() {
           )}
         </View>
 
-        {/* Open on Instagram */}
+        {/* Actions */}
+        <TouchableOpacity
+          onPress={handleDownload}
+          style={tw`items-center rounded-lg border border-border bg-card py-3 mb-3`}
+          activeOpacity={0.8}
+        >
+          <Text style={tw`font-semibold text-foreground`}>Download Video</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={() => Linking.openURL(reel.url)}
           style={tw`items-center rounded-lg bg-primary py-3 mb-6`}
