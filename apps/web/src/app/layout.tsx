@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: "ViralReelsAI - Track Viral Instagram Reels",
   description:
     "Personal dashboard to track and analyze viral Instagram Reels from followed accounts.",
+  icons: {
+    icon: [{ url: "/api/app-icon", type: "image/png" }],
+    apple: [{ url: "/api/app-icon", type: "image/png" }],
+    shortcut: [{ url: "/api/app-icon", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
