@@ -21,11 +21,6 @@
       },
       "package": "com.viralreels.app"
     },
-    "autolinking": {
-      "searchPaths": [
-        "./node_modules"
-      ]
-    },
     "plugins": [
       "expo-router",
       "expo-secure-store"

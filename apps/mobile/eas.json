@@ -6,14 +6,22 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "NODE_ENV": "development",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
       },
       "env": {
+        "NODE_ENV": "production",
+        "NPM_CONFIG_PRODUCTION": "false",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a",
         "EXPO_PUBLIC_SUPABASE_URL": "https://chprzlsjjnrqyrxuviok.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocHJ6bHNqam5ycXlyeHV2aW9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExOTYyMDAsImV4cCI6MjA4Njc3MjIwMH0.m3ae3rK-aIQnRdhIqEl7SVdjmVcLRuMSUFIJKlJlD4Q",
         "EXPO_PUBLIC_API_URL": "https://viralreels-web.vercel.app"
@@ -21,7 +29,13 @@
     },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "gradleCommand": ":app:bundleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
+      },
       "env": {
+        "NODE_ENV": "production",
+        "NPM_CONFIG_PRODUCTION": "false",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a",
         "EXPO_PUBLIC_SUPABASE_URL": "https://chprzlsjjnrqyrxuviok.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocHJ6bHNqam5ycXlyeHV2aW9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExOTYyMDAsImV4cCI6MjA4Njc3MjIwMH0.m3ae3rK-aIQnRdhIqEl7SVdjmVcLRuMSUFIJKlJlD4Q",
         "EXPO_PUBLIC_API_URL": "https://viralreels-web.vercel.app"

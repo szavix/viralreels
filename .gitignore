@@ -46,3 +46,5 @@ dist/
 *.mobileprovision
 *.orig.*
 web-build/
+
+*.apk

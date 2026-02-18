@@ -33,6 +33,8 @@ export default function SettingsScreen() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accountCategoryIdsMap, setAccountCategoryIdsMap] = useState<Record<string, string[]>>({});
+  const [selectedNewAccountCategoryIds, setSelectedNewAccountCategoryIds] = useState<string[]>([]);
+  const [showCategoryManagement, setShowCategoryManagement] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [newUsername, setNewUsername] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -72,10 +74,21 @@ export default function SettingsScreen() {
 
     try {
       const account = await addAccount(newUsername.trim());
+      if (selectedNewAccountCategoryIds.length > 0) {
+        const persistedCategoryIds = await updateAccountCategories(
+          account.id,
+          selectedNewAccountCategoryIds
+        );
+        setAccountCategoryIdsMap((prev) => ({
+          ...prev,
+          [account.id]: persistedCategoryIds,
+        }));
+      }
       setAccounts((prev) =>
         [...prev, account].sort((a, b) => a.username.localeCompare(b.username))
       );
       setNewUsername("");
+      setSelectedNewAccountCategoryIds([]);
     } catch (err) {
       Alert.alert(
         "Error",
@@ -192,6 +205,14 @@ export default function SettingsScreen() {
     }
   }
 
+  function toggleNewAccountCategory(categoryId: string) {
+    setSelectedNewAccountCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  }
+
   return (
     <View style={tw`flex-1 bg-background`}>
       {/* Add account */}
@@ -224,37 +245,37 @@ export default function SettingsScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Add category */}
-      <View style={tw`border-b border-border p-4`}>
-        <Text style={tw`mb-2 text-lg font-bold text-foreground`}>Add Category</Text>
-        <View style={tw`flex-row items-center`}>
-          <View style={tw`flex-1 rounded-lg border border-border bg-card px-3`}>
-            <TextInput
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              placeholder="e.g. goth, talking, irl"
-              placeholderTextColor="#a1a1a1"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={tw`py-3 text-foreground`}
-              editable={!isAddingCategory}
-              onSubmitEditing={handleAddCategory}
-            />
+        {categories.length > 0 && (
+          <View style={tw`mt-3`}>
+            <Text style={tw`mb-2 text-xs font-medium text-muted-foreground`}>
+              Categories for this new account
+            </Text>
+            <View style={tw`flex-row flex-wrap`}>
+              {categories.map((category) => {
+                const selected = selectedNewAccountCategoryIds.includes(category.id);
+                return (
+                  <TouchableOpacity
+                    key={category.id}
+                    onPress={() => toggleNewAccountCategory(category.id)}
+                    style={tw`mb-1 mr-1 rounded-full px-3 py-1 ${selected ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <Text style={tw`text-xs ${selected ? "text-white" : "text-muted-foreground"}`}>
+                      {category.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {selectedNewAccountCategoryIds.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSelectedNewAccountCategoryIds([])}
+                  style={tw`mb-1 mr-1 rounded-full bg-muted px-3 py-1`}
+                >
+                  <Text style={tw`text-xs text-muted-foreground`}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-          <TouchableOpacity
-            onPress={handleAddCategory}
-            disabled={isAddingCategory || !newCategoryName.trim()}
-            style={tw`ml-2 rounded-lg px-4 py-3 ${isAddingCategory || !newCategoryName.trim() ? "bg-muted" : "bg-primary"}`}
-          >
-            {isAddingCategory ? (
-              <ActivityIndicator color="#fafafa" size="small" />
-            ) : (
-              <Text style={tw`font-semibold text-white`}>Add</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
 
       {/* Account list */}
@@ -343,27 +364,69 @@ export default function SettingsScreen() {
         />
       )}
 
-      {/* Category list */}
-      <View style={tw`border-t border-border px-4 py-3`}>
-        <Text style={tw`mb-2 text-base font-semibold text-foreground`}>Categories</Text>
-        {categories.length === 0 ? (
-          <Text style={tw`text-sm text-muted-foreground`}>No categories yet.</Text>
-        ) : (
-          <View style={tw`flex-row flex-wrap`}>
-            {categories.map((category) => (
-              <View
-                key={category.id}
-                style={tw`mb-2 mr-2 flex-row items-center rounded-full border border-border bg-card px-3 py-1`}
-              >
-                <Text style={tw`text-xs text-foreground`}>{category.name}</Text>
-                <TouchableOpacity
-                  onPress={() => handleDeleteCategory(category.id, category.name)}
-                  style={tw`ml-2 rounded-full bg-muted px-2 py-1`}
-                >
-                  <Text style={tw`text-xs text-red-500`}>Delete</Text>
-                </TouchableOpacity>
+      {/* Hidden category management */}
+      <View style={tw`border-t border-border p-4`}>
+        <TouchableOpacity
+          onPress={() => setShowCategoryManagement((prev) => !prev)}
+          style={tw`rounded-lg border border-border bg-card px-4 py-3`}
+          activeOpacity={0.8}
+        >
+          <Text style={tw`text-sm font-medium text-foreground`}>
+            {showCategoryManagement ? "Hide category management" : "Manage categories"}
+          </Text>
+        </TouchableOpacity>
+
+        {showCategoryManagement && (
+          <View style={tw`mt-3`}>
+            <Text style={tw`mb-2 text-base font-semibold text-foreground`}>Add Category</Text>
+            <View style={tw`mb-4 flex-row items-center`}>
+              <View style={tw`flex-1 rounded-lg border border-border bg-card px-3`}>
+                <TextInput
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  placeholder="e.g. goth, talking, irl"
+                  placeholderTextColor="#a1a1a1"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={tw`py-3 text-foreground`}
+                  editable={!isAddingCategory}
+                  onSubmitEditing={handleAddCategory}
+                />
               </View>
-            ))}
+              <TouchableOpacity
+                onPress={handleAddCategory}
+                disabled={isAddingCategory || !newCategoryName.trim()}
+                style={tw`ml-2 rounded-lg px-4 py-3 ${isAddingCategory || !newCategoryName.trim() ? "bg-muted" : "bg-primary"}`}
+              >
+                {isAddingCategory ? (
+                  <ActivityIndicator color="#fafafa" size="small" />
+                ) : (
+                  <Text style={tw`font-semibold text-white`}>Add</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <Text style={tw`mb-2 text-base font-semibold text-foreground`}>Delete Category</Text>
+            {categories.length === 0 ? (
+              <Text style={tw`text-sm text-muted-foreground`}>No categories yet.</Text>
+            ) : (
+              <View style={tw`flex-row flex-wrap`}>
+                {categories.map((category) => (
+                  <View
+                    key={category.id}
+                    style={tw`mb-2 mr-2 flex-row items-center rounded-full border border-border bg-card px-3 py-1`}
+                  >
+                    <Text style={tw`text-xs text-foreground`}>{category.name}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteCategory(category.id, category.name)}
+                      style={tw`ml-2 rounded-full bg-muted px-2 py-1`}
+                    >
+                      <Text style={tw`text-xs text-red-500`}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
       </View>

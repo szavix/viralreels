@@ -7,11 +7,11 @@ const monorepoRoot = path.resolve(projectRoot, "../..");
 const config = getDefaultConfig(projectRoot);
 
 // Support monorepo packages
-config.watchFolders = [monorepoRoot];
+config.watchFolders = [...new Set([...(config.watchFolders ?? []), monorepoRoot])];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(monorepoRoot, "node_modules"),
 ];
-config.resolver.disableHierarchicalLookup = true;
+config.resolver.disableHierarchicalLookup = false;
 
 module.exports = config;
