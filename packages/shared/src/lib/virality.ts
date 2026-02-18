@@ -42,3 +42,40 @@ export function formatCount(num: number): string {
   }
   return num.toString();
 }
+
+/**
+ * Format a timestamp into a compact "time ago" label.
+ * Examples: 1h ago, 12h ago, 1 day ago, 2 weeks ago
+ */
+export function formatTimeAgo(input: string | Date | null | undefined): string {
+  if (!input) return "";
+
+  const timestamp = input instanceof Date ? input.getTime() : new Date(input).getTime();
+  if (!Number.isFinite(timestamp)) return "";
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs <= 0) return "just now";
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+  const weekMs = 7 * dayMs;
+
+  if (diffMs < hourMs) {
+    const minutes = Math.max(1, Math.floor(diffMs / minuteMs));
+    return `${minutes}m ago`;
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.floor(diffMs / hourMs);
+    return `${hours}h ago`;
+  }
+
+  if (diffMs < weekMs) {
+    const days = Math.floor(diffMs / dayMs);
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+
+  const weeks = Math.floor(diffMs / weekMs);
+  return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+}

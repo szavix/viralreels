@@ -2,6 +2,7 @@ export {
   isRisingStar,
   getViralTier,
   formatCount,
+  formatTimeAgo,
 } from "./virality";
 
 export {

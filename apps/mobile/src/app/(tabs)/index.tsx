@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import type { Reel, Category, FilterOption, ReelSortOption } from "@viralreels/shared";
 import {
   formatCount,
+  formatTimeAgo,
   getViralTier,
   VIRAL_TIER_COLORS,
   FILTER_OPTIONS,
@@ -35,6 +36,7 @@ export default function DashboardScreen() {
   const [isScraping, setIsScraping] = useState(false);
   const [filter, setFilter] = useState<FilterOption>("all");
   const [sortBy, setSortBy] = useState<ReelSortOption>("virality");
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -125,6 +127,7 @@ export default function DashboardScreen() {
 
   function renderReelCard({ item }: { item: Reel }) {
     const tier = getViralTier(item.viral_score);
+    const postedAgo = formatTimeAgo(item.posted_at);
 
     return (
       <TouchableOpacity
@@ -163,6 +166,11 @@ export default function DashboardScreen() {
           <Text style={tw`text-sm font-medium text-foreground`} numberOfLines={1}>
             @{item.author_username}
           </Text>
+          {postedAgo ? (
+            <Text style={tw`mt-0.5 text-xs text-muted-foreground`}>
+              {postedAgo}
+            </Text>
+          ) : null}
           <View style={tw`mt-1 flex-row items-center gap-3`}>
             <Text style={tw`text-xs text-muted-foreground`}>
               👁 {formatCount(item.view_count)}
@@ -215,10 +223,18 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           )}
         />
+        <TouchableOpacity
+          onPress={() => setShowAdvancedControls((prev) => !prev)}
+          style={tw`mt-2 self-start rounded-full px-3 py-1.5 ${showAdvancedControls ? "bg-primary" : "bg-muted"}`}
+        >
+          <Text style={tw`text-xs font-medium ${showAdvancedControls ? "text-white" : "text-muted-foreground"}`}>
+            {showAdvancedControls ? "Hide category & sort" : "Show category & sort"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Category filter */}
-      {categories.length > 0 && (
+      {showAdvancedControls && categories.length > 0 && (
         <View style={tw`border-b border-border px-2 py-2`}>
           <FlatList
             horizontal
@@ -253,24 +269,26 @@ export default function DashboardScreen() {
       )}
 
       {/* Sort buttons */}
-      <View style={tw`border-b border-border px-2 py-2`}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={Object.entries(REEL_SORT_OPTIONS) as [ReelSortOption, string][]}
-          keyExtractor={([key]) => key}
-          renderItem={({ item: [key, label] }) => (
-            <TouchableOpacity
-              onPress={() => setSortBy(key)}
-              style={tw`mr-2 rounded-full px-4 py-2 ${sortBy === key ? "bg-primary" : "bg-muted"}`}
-            >
-              <Text style={tw`text-sm font-medium ${sortBy === key ? "text-white" : "text-muted-foreground"}`}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+      {showAdvancedControls && (
+        <View style={tw`border-b border-border px-2 py-2`}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={Object.entries(REEL_SORT_OPTIONS) as [ReelSortOption, string][]}
+            keyExtractor={([key]) => key}
+            renderItem={({ item: [key, label] }) => (
+              <TouchableOpacity
+                onPress={() => setSortBy(key)}
+                style={tw`mr-2 rounded-full px-4 py-2 ${sortBy === key ? "bg-primary" : "bg-muted"}`}
+              >
+                <Text style={tw`text-sm font-medium ${sortBy === key ? "text-white" : "text-muted-foreground"}`}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
 
       {/* Grid */}
       {isLoading && reels.length === 0 ? (
@@ -301,7 +319,7 @@ export default function DashboardScreen() {
             <View style={tw`flex-1 items-center justify-center py-20`}>
               <Text style={tw`text-lg font-medium text-foreground`}>No reels found</Text>
               <Text style={tw`mt-1 text-sm text-muted-foreground`}>
-                Add accounts in Settings to start tracking.
+                Add accounts in Accounts to start tracking.
               </Text>
             </View>
           }

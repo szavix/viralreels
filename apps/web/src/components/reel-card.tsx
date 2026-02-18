@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { Reel } from "@viralreels/shared";
-import { formatCount } from "@viralreels/shared";
+import { formatCount, formatTimeAgo } from "@viralreels/shared";
 import { Badge } from "@/components/ui/badge";
 import { ScoreIndicator } from "@/components/score-indicator";
 import { Eye, Heart, MessageCircle, Music, Zap, Play } from "lucide-react";
@@ -14,6 +14,8 @@ interface ReelCardProps {
 }
 
 export function ReelCard({ reel, onClick }: ReelCardProps) {
+  const postedAgo = formatTimeAgo(reel.posted_at);
+
   return (
     <button
       onClick={() => onClick(reel)}
@@ -70,6 +72,9 @@ export function ReelCard({ reel, onClick }: ReelCardProps) {
         <p className="text-sm font-medium text-foreground truncate">
           @{reel.author_username}
         </p>
+        {postedAgo && (
+          <p className="text-xs text-muted-foreground">{postedAgo}</p>
+        )}
 
         {/* Caption preview */}
         {reel.description && (
