@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flame, LayoutDashboard, Settings } from "lucide-react";
+import { Flame, Heart, LayoutDashboard, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LogoutButton } from "@/components/logout-button";
@@ -25,6 +25,12 @@ export function Navbar() {
               <Link href="/settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Settings
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/favorites" className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Favorites
               </Link>
             </Button>
           </nav>

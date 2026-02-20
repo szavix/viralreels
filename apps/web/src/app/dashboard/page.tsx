@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Reel, FilterOption, ReelSortOption } from "@viralreels/shared";
 import { useReels, useAccounts, useCategories } from "@/hooks/use-reels";
+import { useFavorites } from "@/hooks/use-favorites";
 import { FilterBar } from "@/components/filter-bar";
 import { AccountSelector } from "@/components/account-selector";
 import { CategorySelector } from "@/components/category-selector";
@@ -24,6 +25,12 @@ export default function DashboardPage() {
 
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+  const {
+    isFavorited,
+    isCompleted,
+    toggleFavorite,
+    setFavoriteCompleted,
+  } = useFavorites();
   const { reels, isLoading, page, totalPages, total, setPage, refetch } = useReels({
     filter,
     sortBy,
@@ -138,6 +145,9 @@ export default function DashboardPage() {
         reels={reels}
         isLoading={isLoading}
         onReelClick={setSelectedReel}
+        isFavorited={isFavorited}
+        isCompleted={isCompleted}
+        onToggleFavorite={toggleFavorite}
       />
 
       {/* Pagination */}
@@ -147,6 +157,10 @@ export default function DashboardPage() {
       <ReelModal
         reel={selectedReel}
         onClose={() => setSelectedReel(null)}
+        isFavorited={selectedReel ? isFavorited(selectedReel.id) : false}
+        isCompleted={selectedReel ? isCompleted(selectedReel.id) : false}
+        onToggleFavorite={toggleFavorite}
+        onToggleCompleted={setFavoriteCompleted}
       />
     </div>
   );

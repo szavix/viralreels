@@ -14,10 +14,17 @@ import { Video, ResizeMode } from "expo-av";
 import type { Reel } from "@viralreels/shared";
 import {
   formatCount,
+  formatTimeAgo,
   getViralTier,
   VIRAL_TIER_COLORS,
 } from "@viralreels/shared";
 import { supabase } from "@/lib/supabase";
+import {
+  favoriteReel,
+  getFavoriteStatus,
+  unfavoriteReel,
+  updateFavoriteCompleted,
+} from "@/lib/api";
 import tw from "@/lib/tw";
 
 const { width } = Dimensions.get("window");
@@ -26,19 +33,24 @@ export default function ReelDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reel, setReel] = useState<Reel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const videoRef = useRef<Video>(null);
 
   useEffect(() => {
-    async function loadReel() {
+    async function loadReel(reelId: string) {
       try {
         const { data, error } = await supabase
           .from("reels")
           .select("*")
-          .eq("id", id)
+          .eq("id", reelId)
           .single();
 
         if (error) throw error;
         setReel(data as Reel);
+        const status = await getFavoriteStatus(reelId);
+        setIsFavorited(status.isFavorited);
+        setIsCompleted(status.completed);
       } catch (err) {
         console.error("Failed to load reel:", err);
       } finally {
@@ -46,7 +58,7 @@ export default function ReelDetailScreen() {
       }
     }
 
-    if (id) loadReel();
+    if (id) loadReel(id);
   }, [id]);
 
   if (isLoading) {
@@ -69,6 +81,7 @@ export default function ReelDetailScreen() {
   const postedDate = reel.posted_at
     ? new Date(reel.posted_at).toLocaleDateString()
     : "Unknown";
+  const postedAgo = formatTimeAgo(reel.posted_at);
 
   const duration = reel.video_duration
     ? `${Math.floor(reel.video_duration / 60)}:${Math.floor(reel.video_duration % 60)
@@ -86,6 +99,34 @@ export default function ReelDetailScreen() {
       await Linking.openURL(reel.video_url);
     } catch {
       Alert.alert("Download failed", "Could not open the video download link.");
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (!reel) return;
+    try {
+      if (isFavorited) {
+        await unfavoriteReel(reel.id);
+        setIsFavorited(false);
+        setIsCompleted(false);
+      } else {
+        await favoriteReel(reel.id);
+        setIsFavorited(true);
+        setIsCompleted(false);
+      }
+    } catch (err) {
+      Alert.alert("Favorites", err instanceof Error ? err.message : "Failed to update favorite");
+    }
+  }
+
+  async function handleToggleCompleted() {
+    if (!reel) return;
+    try {
+      const next = !isCompleted;
+      await updateFavoriteCompleted(reel.id, next);
+      setIsCompleted(next);
+    } catch (err) {
+      Alert.alert("Favorites", err instanceof Error ? err.message : "Failed to update completion");
     }
   }
 
@@ -178,6 +219,9 @@ export default function ReelDetailScreen() {
           <Text style={tw`text-xs text-muted-foreground mr-4`}>
             📅 {postedDate}
           </Text>
+          {postedAgo ? (
+            <Text style={tw`text-xs text-muted-foreground mr-4`}>{postedAgo}</Text>
+          ) : null}
           {duration && (
             <Text style={tw`text-xs text-muted-foreground`}>
               ⏱ {duration}
@@ -186,6 +230,28 @@ export default function ReelDetailScreen() {
         </View>
 
         {/* Actions */}
+        <TouchableOpacity
+          onPress={handleToggleFavorite}
+          style={tw`items-center rounded-lg py-3 mb-3 ${isFavorited ? "bg-pink-500" : "bg-muted"}`}
+          activeOpacity={0.8}
+        >
+          <Text style={tw`font-semibold ${isFavorited ? "text-white" : "text-foreground"}`}>
+            {isFavorited ? "♥ Favorited" : "♡ Add to favorites"}
+          </Text>
+        </TouchableOpacity>
+
+        {isFavorited && (
+          <TouchableOpacity
+            onPress={handleToggleCompleted}
+            style={tw`items-center rounded-lg py-3 mb-3 ${isCompleted ? "bg-emerald-600" : "bg-card border border-border"}`}
+            activeOpacity={0.8}
+          >
+            <Text style={tw`font-semibold ${isCompleted ? "text-white" : "text-foreground"}`}>
+              {isCompleted ? "✓ Completed" : "Mark as completed"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           onPress={handleDownload}
           style={tw`items-center rounded-lg border border-border bg-card py-3 mb-3`}

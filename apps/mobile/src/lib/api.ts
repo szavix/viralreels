@@ -72,6 +72,19 @@ export interface ReelsResponse {
   totalPages: number;
 }
 
+export interface FavoriteReel extends Reel {
+  completed: boolean;
+  favorited_at: string;
+}
+
+export interface FavoritesResponse {
+  reels: FavoriteReel[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export async function fetchReels(options: {
   filter?: FilterOption;
   accountId?: string;
@@ -174,5 +187,37 @@ export async function triggerScrape(accountId?: string): Promise<ScrapeResponse>
     method: "POST",
     body: JSON.stringify(accountId ? { accountId } : {}),
     timeoutMs: 0,
+  });
+}
+
+export async function fetchFavorites(page = 1, pageSize = 1000): Promise<FavoritesResponse> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+  });
+  return apiFetch<FavoritesResponse>(`/api/favorites?${params}`);
+}
+
+export async function favoriteReel(reelId: string) {
+  return apiFetch(`/api/favorites`, {
+    method: "POST",
+    body: JSON.stringify({ reelId }),
+  });
+}
+
+export async function unfavoriteReel(reelId: string) {
+  return apiFetch(`/api/favorites/${reelId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getFavoriteStatus(reelId: string) {
+  return apiFetch<{ isFavorited: boolean; completed: boolean }>(`/api/favorites/${reelId}`);
+}
+
+export async function updateFavoriteCompleted(reelId: string, completed: boolean) {
+  return apiFetch(`/api/favorites/${reelId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ completed }),
   });
 }

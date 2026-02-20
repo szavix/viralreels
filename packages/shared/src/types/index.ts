@@ -19,6 +19,9 @@ export type {
   CategoryInsert,
   CategoryUpdate,
   AccountCategory,
+  UserFavorite,
+  UserFavoriteInsert,
+  UserFavoriteUpdate,
   ReelWithAccounts,
   Database,
 } from "./database";

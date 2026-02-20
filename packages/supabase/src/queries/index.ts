@@ -25,3 +25,14 @@ export {
   fetchAccountCategoryLinks,
   replaceAccountCategories,
 } from "./categories";
+
+export {
+  fetchFavoriteReels,
+  addFavorite,
+  removeFavorite,
+  updateFavoriteCompleted,
+  fetchFavoriteStatus,
+  fetchFavoriteStatusesForReels,
+  type FavoriteReel,
+  type FetchFavoriteReelsOptions,
+} from "./favorites";

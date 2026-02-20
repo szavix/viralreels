@@ -53,6 +53,14 @@ export interface AccountCategory {
   category_id: string;
 }
 
+export interface UserFavorite {
+  user_id: string;
+  reel_id: string;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Insert types (omit auto-generated fields) */
 export type AccountInsert = Omit<Account, "id" | "created_at"> & {
   id?: string;
@@ -69,10 +77,19 @@ export type CategoryInsert = Omit<Category, "id" | "created_at"> & {
   created_at?: string;
 };
 
+export type UserFavoriteInsert = Omit<UserFavorite, "created_at" | "updated_at"> & {
+  created_at?: string;
+  updated_at?: string;
+};
+
 /** Update types (all fields optional except id) */
 export type AccountUpdate = Partial<Omit<Account, "id">> & { id: string };
 export type ReelUpdate = Partial<Omit<Reel, "id">> & { id: string };
 export type CategoryUpdate = Partial<Omit<Category, "id">> & { id: string };
+export type UserFavoriteUpdate = Partial<Omit<UserFavorite, "user_id" | "reel_id">> & {
+  user_id: string;
+  reel_id: string;
+};
 
 /** Reel with associated accounts for API responses */
 export interface ReelWithAccounts extends Reel {
@@ -107,6 +124,11 @@ export interface Database {
         Row: AccountCategory;
         Insert: AccountCategory;
         Update: Partial<AccountCategory>;
+      };
+      user_favorites: {
+        Row: UserFavorite;
+        Insert: UserFavoriteInsert;
+        Update: Partial<UserFavoriteInsert>;
       };
     };
   };

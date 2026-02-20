@@ -20,7 +20,14 @@ import {
   FILTER_OPTIONS,
   REEL_SORT_OPTIONS,
 } from "@viralreels/shared";
-import { fetchReels, fetchCategories, triggerScrape } from "@/lib/api";
+import {
+  fetchReels,
+  fetchCategories,
+  fetchFavorites,
+  favoriteReel,
+  unfavoriteReel,
+  triggerScrape,
+} from "@/lib/api";
 import tw from "@/lib/tw";
 
 const { width } = Dimensions.get("window");
@@ -39,6 +46,7 @@ export default function DashboardScreen() {
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [favoriteStatusMap, setFavoriteStatusMap] = useState<Record<string, { completed: boolean }>>({});
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
@@ -53,6 +61,23 @@ export default function DashboardScreen() {
     }
     void loadCategories();
   }, []);
+
+  const loadFavoriteStatuses = useCallback(async () => {
+    try {
+      const data = await fetchFavorites(1, 1000);
+      const nextMap: Record<string, { completed: boolean }> = {};
+      for (const favorite of data.reels) {
+        nextMap[favorite.id] = { completed: favorite.completed };
+      }
+      setFavoriteStatusMap(nextMap);
+    } catch (err) {
+      console.error("Failed to load favorites:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadFavoriteStatuses();
+  }, [loadFavoriteStatuses]);
 
   const loadReels = useCallback(
     async (pageNum: number, refresh = false) => {
@@ -96,6 +121,7 @@ export default function DashboardScreen() {
   function handleRefresh() {
     setIsRefreshing(true);
     setPage(1);
+    void loadFavoriteStatuses();
     loadReels(1, true);
   }
 
@@ -114,6 +140,7 @@ export default function DashboardScreen() {
         "Scrape Complete",
         `Scraped ${result.accounts_processed} account(s) — ${result.total_reels} reels found`
       );
+      await loadFavoriteStatuses();
       handleRefresh();
     } catch (err) {
       Alert.alert(
@@ -128,6 +155,8 @@ export default function DashboardScreen() {
   function renderReelCard({ item }: { item: Reel }) {
     const tier = getViralTier(item.viral_score);
     const postedAgo = formatTimeAgo(item.posted_at);
+    const isFavorited = !!favoriteStatusMap[item.id];
+    const isCompleted = favoriteStatusMap[item.id]?.completed ?? false;
 
     return (
       <TouchableOpacity
@@ -155,11 +184,43 @@ export default function DashboardScreen() {
             </Text>
           </View>
 
-          {item.is_rising_star && (
-            <View style={tw`absolute right-2 top-2 rounded-full bg-amber-500 px-2 py-1`}>
-              <Text style={tw`text-xs font-bold text-white`}>⚡ Rising</Text>
-            </View>
-          )}
+          <View style={tw`absolute right-2 top-2 flex-row items-center`}>
+            {isCompleted && (
+              <View style={tw`mr-1 rounded-full bg-emerald-600 px-2 py-1`}>
+                <Text style={tw`text-xs font-bold text-white`}>✓ Done</Text>
+              </View>
+            )}
+            {item.is_rising_star && (
+              <View style={tw`mr-1 rounded-full bg-amber-500 px-2 py-1`}>
+                <Text style={tw`text-xs font-bold text-white`}>⚡ Rising</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  if (isFavorited) {
+                    await unfavoriteReel(item.id);
+                    setFavoriteStatusMap((prev) => {
+                      const next = { ...prev };
+                      delete next[item.id];
+                      return next;
+                    });
+                  } else {
+                    await favoriteReel(item.id);
+                    setFavoriteStatusMap((prev) => ({ ...prev, [item.id]: { completed: false } }));
+                  }
+                } catch (err) {
+                  Alert.alert(
+                    "Favorites",
+                    err instanceof Error ? err.message : "Failed to update favorite"
+                  );
+                }
+              }}
+              style={tw`rounded-full px-2 py-1 ${isFavorited ? "bg-pink-500" : "bg-black/60"}`}
+            >
+              <Text style={tw`text-xs font-bold text-white`}>{isFavorited ? "♥" : "♡"}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={tw`p-2`}>

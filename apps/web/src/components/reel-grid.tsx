@@ -8,9 +8,19 @@ interface ReelGridProps {
   reels: Reel[];
   isLoading?: boolean;
   onReelClick: (reel: Reel) => void;
+  isFavorited?: (reelId: string) => boolean;
+  isCompleted?: (reelId: string) => boolean;
+  onToggleFavorite?: (reelId: string) => void;
 }
 
-export function ReelGrid({ reels, isLoading, onReelClick }: ReelGridProps) {
+export function ReelGrid({
+  reels,
+  isLoading,
+  onReelClick,
+  isFavorited,
+  isCompleted,
+  onToggleFavorite,
+}: ReelGridProps) {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -33,7 +43,14 @@ export function ReelGrid({ reels, isLoading, onReelClick }: ReelGridProps) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {reels.map((reel) => (
-        <ReelCard key={reel.id} reel={reel} onClick={onReelClick} />
+        <ReelCard
+          key={reel.id}
+          reel={reel}
+          onClick={onReelClick}
+          isFavorited={isFavorited?.(reel.id)}
+          isCompleted={isCompleted?.(reel.id)}
+          onToggleFavorite={onToggleFavorite}
+        />
       ))}
     </div>
   );

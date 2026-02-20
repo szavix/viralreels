@@ -5,15 +5,25 @@ import type { Reel } from "@viralreels/shared";
 import { formatCount, formatTimeAgo } from "@viralreels/shared";
 import { Badge } from "@/components/ui/badge";
 import { ScoreIndicator } from "@/components/score-indicator";
-import { Eye, Heart, MessageCircle, Music, Zap, Play } from "lucide-react";
+import { Eye, Heart, MessageCircle, Music, Zap, Play, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface ReelCardProps {
   reel: Reel;
   onClick: (reel: Reel) => void;
+  isFavorited?: boolean;
+  isCompleted?: boolean;
+  onToggleFavorite?: (reelId: string) => void;
 }
 
-export function ReelCard({ reel, onClick }: ReelCardProps) {
+export function ReelCard({
+  reel,
+  onClick,
+  isFavorited = false,
+  isCompleted = false,
+  onToggleFavorite,
+}: ReelCardProps) {
   const postedAgo = formatTimeAgo(reel.posted_at);
 
   return (
@@ -46,13 +56,41 @@ export function ReelCard({ reel, onClick }: ReelCardProps) {
 
         {/* Top badges */}
         <div className="absolute left-2 right-2 top-2 flex items-start justify-between">
-          <ScoreIndicator score={reel.viral_score} />
-          {reel.is_rising_star && (
-            <Badge className="bg-amber-500/90 text-white hover:bg-amber-500">
-              <Zap className="mr-1 h-3 w-3" />
-              Rising
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            <ScoreIndicator score={reel.viral_score} />
+            {isCompleted && (
+              <Badge className="bg-emerald-500/90 text-white hover:bg-emerald-500">
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                Completed
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {reel.is_rising_star && (
+              <Badge className="bg-amber-500/90 text-white hover:bg-amber-500">
+                <Zap className="mr-1 h-3 w-3" />
+                Rising
+              </Badge>
+            )}
+            {onToggleFavorite && (
+              <Button
+                type="button"
+                size="icon"
+                variant={isFavorited ? "default" : "secondary"}
+                className={cn(
+                  "h-7 w-7 rounded-full",
+                  isFavorited && "bg-pink-500 text-white hover:bg-pink-500/90"
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleFavorite(reel.id);
+                }}
+                aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Heart className={cn("h-3.5 w-3.5", isFavorited && "fill-current")} />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Audio track */}

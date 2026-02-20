@@ -24,14 +24,26 @@ import {
   Clock,
   User,
   Calendar,
+  CheckCircle2,
 } from "lucide-react";
 
 interface ReelModalProps {
   reel: Reel | null;
   onClose: () => void;
+  isFavorited?: boolean;
+  isCompleted?: boolean;
+  onToggleFavorite?: (reelId: string) => void;
+  onToggleCompleted?: (reelId: string, completed: boolean) => void;
 }
 
-export function ReelModal({ reel, onClose }: ReelModalProps) {
+export function ReelModal({
+  reel,
+  onClose,
+  isFavorited = false,
+  isCompleted = false,
+  onToggleFavorite,
+  onToggleCompleted,
+}: ReelModalProps) {
   if (!reel) return null;
 
   const postedDate = reel.posted_at
@@ -157,6 +169,28 @@ export function ReelModal({ reel, onClose }: ReelModalProps) {
 
         {/* Actions */}
         <div className="flex gap-2">
+          {onToggleFavorite && (
+            <Button
+              type="button"
+              variant={isFavorited ? "default" : "secondary"}
+              onClick={() => onToggleFavorite(reel.id)}
+              className={isFavorited ? "bg-pink-500 text-white hover:bg-pink-500/90" : ""}
+            >
+              <Heart className="mr-2 h-4 w-4" />
+              {isFavorited ? "Favorited" : "Add to favorites"}
+            </Button>
+          )}
+          {isFavorited && onToggleCompleted && (
+            <Button
+              type="button"
+              variant={isCompleted ? "default" : "outline"}
+              onClick={() => onToggleCompleted(reel.id, !isCompleted)}
+              className={isCompleted ? "bg-emerald-600 text-white hover:bg-emerald-600/90" : ""}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {isCompleted ? "Completed" : "Mark completed"}
+            </Button>
+          )}
           <Button asChild className="flex-1">
             <a
               href={reel.url}
