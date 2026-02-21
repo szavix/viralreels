@@ -43,21 +43,46 @@ export default function DashboardPage() {
     setScrapeStatus(null);
 
     try {
-      const response = await fetch("/api/scrape", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
+      let cursor = 0;
+      let safetyCounter = 0;
+      let totalProcessed = 0;
+      let totalFailed = 0;
+      let totalReels = 0;
+      let accountsTotal = 0;
 
-      const data = await response.json();
+      while (safetyCounter < 100) {
+        const response = await fetch("/api/scrape", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cursor, batchSize: 8 }),
+        });
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Scrape failed");
+        if (!response.ok) {
+          throw new Error(data.error || "Scrape failed");
+        }
+
+        totalProcessed += data.accounts_processed ?? 0;
+        totalFailed += data.failed_accounts ?? 0;
+        totalReels += data.total_reels ?? 0;
+        accountsTotal = Math.max(accountsTotal, data.accounts_total ?? 0);
+
+        if (data.done || data.nextCursor == null) {
+          break;
+        }
+
+        // Guard against unexpected cursor loops.
+        if (data.nextCursor <= cursor) {
+          break;
+        }
+
+        cursor = data.nextCursor;
+        safetyCounter += 1;
       }
 
       setScrapeStatus({
         type: "success",
-        message: `Scraped ${data.accounts_processed} account(s) — ${data.total_reels} reels found`,
+        message: `Scraped ${totalProcessed}/${accountsTotal} account(s) — ${totalReels} reels found (${totalFailed} failed)`,
       });
       refetch();
       setTimeout(() => setScrapeStatus(null), 5000);
@@ -83,8 +108,8 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-muted-foreground">
             {total > 0
-              ? `${formatCount(total)} reels tracked across your accounts`
-              : "No reels yet. Add accounts in Settings and run a scrape."}
+              ? `${formatCount(total)} reels tracked across ${formatCount(accounts.length)} account(s)`
+              : "No reels yet. Add accounts in Accounts and run a scrape."}
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -34,7 +34,7 @@ export function ReelGrid({
       <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/50 text-muted-foreground">
         <p className="text-lg font-medium">No reels found</p>
         <p className="text-sm">
-          Try changing your filters or add more accounts in Settings.
+          Try changing your filters or add more accounts in Accounts.
         </p>
       </div>
     );

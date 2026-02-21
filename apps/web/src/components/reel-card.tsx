@@ -55,43 +55,41 @@ export function ReelCard({
         </div>
 
         {/* Top badges */}
-        <div className="absolute left-2 right-2 top-2 flex items-start justify-between">
-          <div className="flex items-center gap-2">
+        <div className="absolute left-2 right-2 top-2 pr-9">
+          <div className="flex flex-wrap items-center gap-1.5">
             <ScoreIndicator score={reel.viral_score} />
             {isCompleted && (
               <Badge className="bg-emerald-500/90 text-white hover:bg-emerald-500">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
-                Completed
+                Done
               </Badge>
             )}
-          </div>
-          <div className="flex items-center gap-2">
             {reel.is_rising_star && (
               <Badge className="bg-amber-500/90 text-white hover:bg-amber-500">
                 <Zap className="mr-1 h-3 w-3" />
                 Rising
               </Badge>
             )}
-            {onToggleFavorite && (
-              <Button
-                type="button"
-                size="icon"
-                variant={isFavorited ? "default" : "secondary"}
-                className={cn(
-                  "h-7 w-7 rounded-full",
-                  isFavorited && "bg-pink-500 text-white hover:bg-pink-500/90"
-                )}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleFavorite(reel.id);
-                }}
-                aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Heart className={cn("h-3.5 w-3.5", isFavorited && "fill-current")} />
-              </Button>
-            )}
           </div>
         </div>
+        {onToggleFavorite && (
+          <Button
+            type="button"
+            size="icon"
+            variant={isFavorited ? "default" : "secondary"}
+            className={cn(
+              "absolute right-2 top-2 z-10 h-7 w-7 rounded-full",
+              isFavorited && "bg-pink-500 text-white hover:bg-pink-500/90"
+            )}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleFavorite(reel.id);
+            }}
+            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart className={cn("h-3.5 w-3.5", isFavorited && "fill-current")} />
+          </Button>
+        )}
 
         {/* Audio track */}
         {reel.audio_track && !reel.is_original_audio && (

@@ -40,6 +40,7 @@ export default function SettingsScreen() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const activeAccountsCount = accounts.filter((account) => account.active).length;
 
   useEffect(() => {
     void loadSettingsData();
@@ -215,6 +216,13 @@ export default function SettingsScreen() {
 
   return (
     <View style={tw`flex-1 bg-background`}>
+      <View style={tw`border-b border-border px-4 py-3`}>
+        <Text style={tw`text-lg font-bold text-foreground`}>Accounts</Text>
+        <Text style={tw`text-xs text-muted-foreground`}>
+          {formatCount(accounts.length)} tracked ({formatCount(activeAccountsCount)} active)
+        </Text>
+      </View>
+
       {/* Add account */}
       <View style={tw`border-b border-border p-4`}>
         <Text style={tw`mb-2 text-lg font-bold text-foreground`}>Add Account</Text>

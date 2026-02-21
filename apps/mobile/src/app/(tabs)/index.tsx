@@ -11,7 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import type { Reel, Category, FilterOption, ReelSortOption } from "@viralreels/shared";
+import type { Reel, Account, Category, FilterOption, ReelSortOption } from "@viralreels/shared";
 import {
   formatCount,
   formatTimeAgo,
@@ -23,6 +23,7 @@ import {
 import {
   fetchReels,
   fetchCategories,
+  fetchAccounts,
   fetchFavorites,
   favoriteReel,
   unfavoriteReel,
@@ -46,6 +47,7 @@ export default function DashboardScreen() {
   const [sortBy, setSortBy] = useState<ReelSortOption>("virality");
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [favoriteStatusMap, setFavoriteStatusMap] = useState<Record<string, { completed: boolean }>>({});
   const [page, setPage] = useState(1);
@@ -61,6 +63,18 @@ export default function DashboardScreen() {
       }
     }
     void loadCategories();
+  }, []);
+
+  useEffect(() => {
+    async function loadAccounts() {
+      try {
+        const data = await fetchAccounts();
+        setAccounts(data);
+      } catch (err) {
+        console.error("Failed to load accounts:", err);
+      }
+    }
+    void loadAccounts();
   }, []);
 
   const loadFavoriteStatuses = useCallback(async () => {
@@ -136,10 +150,33 @@ export default function DashboardScreen() {
   async function handleScrapeNow() {
     setIsScraping(true);
     try {
-      const result = await triggerScrape();
+      let cursor = 0;
+      let safetyCounter = 0;
+      let totalProcessed = 0;
+      let totalFailed = 0;
+      let totalReels = 0;
+      let accountsTotal = 0;
+
+      while (safetyCounter < 100) {
+        const result = await triggerScrape({ cursor, batchSize: 8 });
+        totalProcessed += result.accounts_processed ?? 0;
+        totalFailed += result.failed_accounts ?? 0;
+        totalReels += result.total_reels ?? 0;
+        accountsTotal = Math.max(accountsTotal, result.accounts_total ?? 0);
+
+        if (result.done || result.nextCursor == null) {
+          break;
+        }
+        if (result.nextCursor <= cursor) {
+          break;
+        }
+        cursor = result.nextCursor;
+        safetyCounter += 1;
+      }
+
       Alert.alert(
         "Scrape Complete",
-        `Scraped ${result.accounts_processed} account(s) — ${result.total_reels} reels found`
+        `Scraped ${totalProcessed}/${accountsTotal} account(s) — ${totalReels} reels found (${totalFailed} failed)`
       );
       await loadFavoriteStatuses();
       handleRefresh();
@@ -253,7 +290,12 @@ export default function DashboardScreen() {
     <View style={tw`flex-1 bg-background`}>
       {/* Header */}
       <View style={tw`flex-row items-center justify-between border-b border-border px-4 py-2`}>
-        <Text style={tw`text-lg font-bold text-foreground`}>Viral Reels</Text>
+        <View>
+          <Text style={tw`text-lg font-bold text-foreground`}>Viral Reels</Text>
+          <Text style={tw`text-xs text-muted-foreground`}>
+            {formatCount(accounts.length)} account(s) tracked
+          </Text>
+        </View>
         <TouchableOpacity
           onPress={handleScrapeNow}
           disabled={isScraping}

@@ -172,7 +172,13 @@ export async function updateAccountCategories(
 export interface ScrapeResponse {
   message: string;
   duration_ms: number;
+  done?: boolean;
+  hasMore?: boolean;
+  nextCursor?: number | null;
+  batch_size?: number;
+  accounts_total: number;
   accounts_processed: number;
+  failed_accounts?: number;
   total_reels: number;
   results: Array<{
     username: string;
@@ -182,10 +188,14 @@ export interface ScrapeResponse {
   }>;
 }
 
-export async function triggerScrape(accountId?: string): Promise<ScrapeResponse> {
+export async function triggerScrape(options?: {
+  accountId?: string;
+  cursor?: number;
+  batchSize?: number;
+}): Promise<ScrapeResponse> {
   return apiFetch<ScrapeResponse>("/api/scrape", {
     method: "POST",
-    body: JSON.stringify(accountId ? { accountId } : {}),
+    body: JSON.stringify(options ?? {}),
     timeoutMs: 0,
   });
 }

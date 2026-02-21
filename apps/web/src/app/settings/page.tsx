@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-  Settings,
+  Users,
   AtSign,
   Plus,
   Trash2,
@@ -24,7 +24,6 @@ import {
   AlertCircle,
   Check,
   UserCircle,
-  Users,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -42,6 +41,7 @@ export default function SettingsPage() {
   const [accountCategoryIdsMap, setAccountCategoryIdsMap] = useState<Record<string, string[]>>({});
   const [savingCategoryAccountIds, setSavingCategoryAccountIds] = useState<Set<string>>(new Set());
   const [deletingCategoryIds, setDeletingCategoryIds] = useState<Set<string>>(new Set());
+  const activeAccountsCount = accounts.filter((account) => account.active).length;
 
   useEffect(() => {
     void loadInitialData();
@@ -66,7 +66,7 @@ export default function SettingsPage() {
       setCategories(loadedCategories);
       await loadAccountCategoryMappings(loadedAccounts.map((account) => account.id));
     } catch {
-      setError("Failed to load settings data");
+      setError("Failed to load accounts data");
     } finally {
       setIsLoading(false);
     }
@@ -270,11 +270,14 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <Settings className="h-6 w-6 text-primary" />
-          Settings
+          <Users className="h-6 w-6 text-primary" />
+          Accounts
         </h1>
         <p className="text-sm text-muted-foreground">
-          Manage the Instagram accounts you want to track.
+          Manage the Instagram accounts you want to track.{" "}
+          {isLoading
+            ? "Loading account totals..."
+            : `${formatCount(accounts.length)} tracked (${formatCount(activeAccountsCount)} active).`}
         </p>
       </div>
 
