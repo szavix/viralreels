@@ -152,13 +152,31 @@ export default function DashboardScreen() {
     try {
       let cursor = 0;
       let safetyCounter = 0;
+      let currentBatchSize = 4;
       let totalProcessed = 0;
       let totalFailed = 0;
       let totalReels = 0;
       let accountsTotal = 0;
 
       while (safetyCounter < 100) {
-        const result = await triggerScrape({ cursor, batchSize: 8 });
+        let result: Awaited<ReturnType<typeof triggerScrape>> | null = null;
+        let lastErrorMessage = "Scrape failed";
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const attemptBatchSize = Math.max(1, Math.floor(currentBatchSize / 2 ** attempt));
+          try {
+            result = await triggerScrape({ cursor, batchSize: attemptBatchSize });
+            currentBatchSize = attemptBatchSize;
+            break;
+          } catch (err) {
+            lastErrorMessage =
+              err instanceof Error ? err.message : "Failed to run scrape batch";
+          }
+        }
+
+        if (!result) {
+          throw new Error(lastErrorMessage);
+        }
         totalProcessed += result.accounts_processed ?? 0;
         totalFailed += result.failed_accounts ?? 0;
         totalReels += result.total_reels ?? 0;

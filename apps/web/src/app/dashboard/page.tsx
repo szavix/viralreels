@@ -45,21 +45,48 @@ export default function DashboardPage() {
     try {
       let cursor = 0;
       let safetyCounter = 0;
+      let currentBatchSize = 4;
       let totalProcessed = 0;
       let totalFailed = 0;
       let totalReels = 0;
       let accountsTotal = 0;
 
       while (safetyCounter < 100) {
-        const response = await fetch("/api/scrape", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cursor, batchSize: 8 }),
-        });
-        const data = await response.json();
+        let data: {
+          accounts_processed?: number;
+          failed_accounts?: number;
+          total_reels?: number;
+          accounts_total?: number;
+          done?: boolean;
+          nextCursor?: number | null;
+          message?: string;
+          error?: string;
+        } | null = null;
+        let responseOk = false;
+        let lastErrorMessage = "Scrape failed";
 
-        if (!response.ok) {
-          throw new Error(data.error || "Scrape failed");
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const attemptBatchSize = Math.max(1, Math.floor(currentBatchSize / 2 ** attempt));
+          const response = await fetch("/api/scrape", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cursor, batchSize: attemptBatchSize }),
+          });
+          const payload = await response.json().catch(() => null);
+
+          if (response.ok) {
+            data = payload;
+            responseOk = true;
+            currentBatchSize = attemptBatchSize;
+            break;
+          }
+
+          lastErrorMessage =
+            payload?.message || payload?.error || `Scrape failed (HTTP ${response.status})`;
+        }
+
+        if (!responseOk || !data) {
+          throw new Error(lastErrorMessage);
         }
 
         totalProcessed += data.accounts_processed ?? 0;

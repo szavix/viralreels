@@ -11,9 +11,9 @@ import {
 } from "@viralreels/supabase";
 import { scrapeAccount, throttle, type ScrapeResult } from "@/services/apify";
 
-const DEFAULT_BATCH_SIZE = 8;
+const DEFAULT_BATCH_SIZE = 4;
 const MAX_BATCH_SIZE = 20;
-const SOFT_TIME_BUDGET_MS = 250_000;
+const SOFT_TIME_BUDGET_MS = 500_000;
 
 /**
  * POST /api/scrape
@@ -169,4 +169,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export const maxDuration = 300;
+export const maxDuration = 600;
