@@ -1,159 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedClient } from "@/lib/auth";
-import type { Account } from "@viralreels/shared";
+import { createServiceClient } from "@viralreels/supabase";
 import {
-  createServiceClient,
-  fetchActiveAccounts,
-  fetchAccountById,
-  upsertReels,
-  linkReelToAccount,
-  updateAccountProfile,
-} from "@viralreels/supabase";
-import { scrapeAccount, throttle, type ScrapeResult } from "@/services/apify";
-
-const DEFAULT_BATCH_SIZE = 4;
-const MAX_BATCH_SIZE = 20;
-const SOFT_TIME_BUDGET_MS = 500_000;
+  createScrapeJob,
+  ensureScrapeJob,
+  getLatestUserScrapeJob,
+  getScrapeJobById,
+  processScrapeJobBatch,
+} from "@/services/scrape-jobs";
 
 /**
  * POST /api/scrape
  *
- * Manual scrape trigger. Authenticated (not cron-secret).
- * Accepts optional { accountId } to scrape a single account,
- * or scrapes active accounts in continuation-safe batches if omitted.
+ * Start or continue a persistent scrape job.
+ * Safe to call from UI: if a job is already running, it reuses it.
  */
 export async function POST(request: NextRequest) {
-  const { error } = await getAuthenticatedClient(request);
+  const { user, error } = await getAuthenticatedClient(request);
   if (error) return error;
 
-  const startTime = Date.now();
   const supabase = createServiceClient();
 
   try {
     const body = await request.json().catch(() => ({}));
-    const {
-      accountId,
-      cursor: rawCursor,
-      batchSize: rawBatchSize,
-    } = body as {
-      accountId?: string;
-      cursor?: number;
+    const { batchSize, forceNew } = body as {
       batchSize?: number;
+      forceNew?: boolean;
     };
 
-    const cursor = Math.max(0, Number.isFinite(rawCursor) ? Number(rawCursor) : 0);
-    const batchSize = Math.min(
-      MAX_BATCH_SIZE,
-      Math.max(1, Number.isFinite(rawBatchSize) ? Number(rawBatchSize) : DEFAULT_BATCH_SIZE)
-    );
+    const job = forceNew
+      ? await createScrapeJob(supabase, user!.id, batchSize)
+      : await ensureScrapeJob(supabase, user!.id, batchSize);
 
-    let accounts;
-    let accountsTotal = 0;
-    let batchAccounts: Account[] = [];
-    let batchStart = 0;
-    if (accountId) {
-      const account = await fetchAccountById(supabase, accountId);
-      accounts = [account];
-      accountsTotal = 1;
-      batchAccounts = accounts;
-    } else {
-      accounts = await fetchActiveAccounts(supabase);
-      accountsTotal = accounts.length;
-      batchStart = Math.min(cursor, accountsTotal);
-      const batchEnd = Math.min(batchStart + batchSize, accountsTotal);
-      batchAccounts = accounts.slice(batchStart, batchEnd);
-    }
+    const progress = await processScrapeJobBatch(supabase, job.id);
+    const current = progress?.job ?? (await getScrapeJobById(supabase, job.id));
 
-    if (accountsTotal === 0) {
-      return NextResponse.json({
-        message: "No accounts to scrape",
-        duration_ms: Date.now() - startTime,
-        done: true,
-        nextCursor: null,
-        hasMore: false,
-        accounts_total: 0,
-        accounts_processed: 0,
-        failed_accounts: 0,
-        total_reels: 0,
-        results: [],
-      });
-    }
-
-    const results: ScrapeResult[] = [];
-    let processed = 0;
-
-    for (let i = 0; i < batchAccounts.length; i++) {
-      if (!accountId && Date.now() - startTime > SOFT_TIME_BUDGET_MS) {
-        break;
-      }
-      const account = batchAccounts[i];
-      console.log(
-        `[Scrape] Processing account ${accountId ? i + 1 : batchStart + i + 1}/${accountsTotal}: @${account.username}`
-      );
-
-      try {
-        const scrapeResult = await scrapeAccount(account);
-        results.push(scrapeResult);
-
-        if (scrapeResult.profileMetadata) {
-          await updateAccountProfile(
-            supabase,
-            account.id,
-            scrapeResult.profileMetadata
-          );
-        }
-
-        if (scrapeResult.reels.length > 0) {
-          const upsertedReels = await upsertReels(supabase, scrapeResult.reels);
-
-          for (const reel of upsertedReels) {
-            await linkReelToAccount(supabase, reel.id, account.id);
-          }
-        }
-      } catch (accountErr) {
-        const message =
-          accountErr instanceof Error ? accountErr.message : String(accountErr);
-        results.push({
-          account,
-          totalFetched: 0,
-          reelsFiltered: 0,
-          reels: [],
-          error: message,
-        });
-      }
-      processed++;
-
-      if (i < batchAccounts.length - 1) {
-        await throttle();
-      }
-    }
-
-    const failedAccounts = results.filter((r) => r.error).length;
-    const nextCursor = accountId
-      ? null
-      : Math.min(batchStart + processed, accountsTotal);
-    const done = accountId ? true : (nextCursor ?? 0) >= accountsTotal;
-
-    const summary = {
-      message: "Scrape completed",
-      duration_ms: Date.now() - startTime,
-      done,
-      hasMore: !done,
-      nextCursor,
-      batch_size: batchSize,
-      accounts_total: accountsTotal,
-      accounts_processed: processed,
-      failed_accounts: failedAccounts,
-      results: results.map((r) => ({
-        username: r.account.username,
-        fetched: r.totalFetched,
-        reels: r.reelsFiltered,
-        error: r.error ?? null,
-      })),
-      total_reels: results.reduce((sum, r) => sum + r.reelsFiltered, 0),
-    };
-
-    return NextResponse.json(summary);
+    return NextResponse.json({
+      message:
+        current.status === "completed"
+          ? "Scrape completed"
+          : "Scrape started",
+      job_id: current.id,
+      status: current.status,
+      done: current.status === "completed",
+      hasMore: current.status !== "completed",
+      nextCursor: current.cursor,
+      batch_size: current.batch_size,
+      accounts_total: current.accounts_total,
+      accounts_processed: current.accounts_processed,
+      failed_accounts: current.failed_accounts,
+      total_reels: current.total_reels,
+      last_error: current.last_error,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[Scrape] Manual scrape failed:", message);
@@ -162,8 +60,66 @@ export async function POST(request: NextRequest) {
       {
         error: "Scrape failed",
         message,
-        duration_ms: Date.now() - startTime,
       },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/scrape?jobId=<uuid>
+ *
+ * Read status for a scrape job.
+ */
+export async function GET(request: NextRequest) {
+  const { user, error } = await getAuthenticatedClient(request);
+  if (error) return error;
+
+  const supabase = createServiceClient();
+
+  try {
+    const jobId = request.nextUrl.searchParams.get("jobId");
+    const job = jobId
+      ? await getScrapeJobById(supabase, jobId)
+      : await getLatestUserScrapeJob(supabase, user!.id);
+
+    if (!job) {
+      return NextResponse.json({
+        message: "No scrape job found",
+        job_id: null,
+        status: "idle",
+        done: true,
+        hasMore: false,
+        nextCursor: null,
+        accounts_total: 0,
+        accounts_processed: 0,
+        failed_accounts: 0,
+        total_reels: 0,
+        last_error: null,
+      });
+    }
+
+    return NextResponse.json({
+      message:
+        job.status === "completed"
+          ? "Scrape completed"
+          : "Scrape in progress",
+      job_id: job.id,
+      status: job.status,
+      done: job.status === "completed",
+      hasMore: job.status !== "completed",
+      nextCursor: job.cursor,
+      batch_size: job.batch_size,
+      accounts_total: job.accounts_total,
+      accounts_processed: job.accounts_processed,
+      failed_accounts: job.failed_accounts,
+      total_reels: job.total_reels,
+      last_error: job.last_error,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { error: "Failed to fetch scrape status", message },
       { status: 500 }
     );
   }

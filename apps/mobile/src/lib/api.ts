@@ -171,7 +171,9 @@ export async function updateAccountCategories(
 
 export interface ScrapeResponse {
   message: string;
-  duration_ms: number;
+  duration_ms?: number;
+  job_id?: string | null;
+  status?: "idle" | "queued" | "running" | "completed" | "failed";
   done?: boolean;
   hasMore?: boolean;
   nextCursor?: number | null;
@@ -189,8 +191,6 @@ export interface ScrapeResponse {
 }
 
 export async function triggerScrape(options?: {
-  accountId?: string;
-  cursor?: number;
   batchSize?: number;
 }): Promise<ScrapeResponse> {
   return apiFetch<ScrapeResponse>("/api/scrape", {
@@ -198,6 +198,13 @@ export async function triggerScrape(options?: {
     body: JSON.stringify(options ?? {}),
     timeoutMs: 0,
   });
+}
+
+export async function getScrapeStatus(jobId?: string): Promise<ScrapeResponse> {
+  const params = new URLSearchParams();
+  if (jobId) params.set("jobId", jobId);
+  const suffix = params.toString();
+  return apiFetch<ScrapeResponse>(`/api/scrape${suffix ? `?${suffix}` : ""}`);
 }
 
 export async function fetchFavorites(page = 1, pageSize = 1000): Promise<FavoritesResponse> {

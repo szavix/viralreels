@@ -27,6 +27,7 @@ import {
   fetchFavorites,
   favoriteReel,
   unfavoriteReel,
+  getScrapeStatus,
   triggerScrape,
 } from "@/lib/api";
 import tw from "@/lib/tw";
@@ -150,51 +151,21 @@ export default function DashboardScreen() {
   async function handleScrapeNow() {
     setIsScraping(true);
     try {
-      let cursor = 0;
-      let safetyCounter = 0;
-      let currentBatchSize = 4;
-      let totalProcessed = 0;
-      let totalFailed = 0;
-      let totalReels = 0;
-      let accountsTotal = 0;
-
-      while (safetyCounter < 100) {
-        let result: Awaited<ReturnType<typeof triggerScrape>> | null = null;
-        let lastErrorMessage = "Scrape failed";
-
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const attemptBatchSize = Math.max(1, Math.floor(currentBatchSize / 2 ** attempt));
-          try {
-            result = await triggerScrape({ cursor, batchSize: attemptBatchSize });
-            currentBatchSize = attemptBatchSize;
-            break;
-          } catch (err) {
-            lastErrorMessage =
-              err instanceof Error ? err.message : "Failed to run scrape batch";
-          }
-        }
-
-        if (!result) {
-          throw new Error(lastErrorMessage);
-        }
-        totalProcessed += result.accounts_processed ?? 0;
-        totalFailed += result.failed_accounts ?? 0;
-        totalReels += result.total_reels ?? 0;
-        accountsTotal = Math.max(accountsTotal, result.accounts_total ?? 0);
-
-        if (result.done || result.nextCursor == null) {
-          break;
-        }
-        if (result.nextCursor <= cursor) {
-          break;
-        }
-        cursor = result.nextCursor;
-        safetyCounter += 1;
+      const start = await triggerScrape({ batchSize: 4 });
+      if (!start.job_id) {
+        throw new Error(start.message || "Failed to start scrape job");
+      }
+      let latest = start;
+      let polls = 0;
+      while (!latest.done && polls < 120) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        latest = await getScrapeStatus(start.job_id);
+        polls += 1;
       }
 
       Alert.alert(
         "Scrape Complete",
-        `Scraped ${totalProcessed}/${accountsTotal} account(s) — ${totalReels} reels found (${totalFailed} failed)`
+        `Scraped ${latest.accounts_processed ?? 0}/${latest.accounts_total ?? 0} account(s) — ${latest.total_reels ?? 0} reels found (${latest.failed_accounts ?? 0} failed)`
       );
       await loadFavoriteStatuses();
       handleRefresh();
