@@ -200,9 +200,13 @@ export async function triggerScrape(options?: {
   });
 }
 
-export async function getScrapeStatus(jobId?: string): Promise<ScrapeResponse> {
+export async function getScrapeStatus(
+  jobId?: string,
+  options?: { advance?: boolean }
+): Promise<ScrapeResponse> {
   const params = new URLSearchParams();
   if (jobId) params.set("jobId", jobId);
+  if (options?.advance) params.set("advance", "1");
   const suffix = params.toString();
   return apiFetch<ScrapeResponse>(`/api/scrape${suffix ? `?${suffix}` : ""}`);
 }

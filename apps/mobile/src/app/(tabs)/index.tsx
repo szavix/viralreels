@@ -159,7 +159,7 @@ export default function DashboardScreen() {
       let polls = 0;
       while (!latest.done && polls < 120) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        latest = await getScrapeStatus(start.job_id);
+        latest = await getScrapeStatus(start.job_id, { advance: true });
         polls += 1;
       }
 

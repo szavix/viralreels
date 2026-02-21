@@ -79,6 +79,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const jobId = request.nextUrl.searchParams.get("jobId");
+    const shouldAdvance =
+      request.nextUrl.searchParams.get("advance") === "1" ||
+      request.nextUrl.searchParams.get("advance") === "true";
     const job = jobId
       ? await getScrapeJobById(supabase, jobId)
       : await getLatestUserScrapeJob(supabase, user!.id);
@@ -99,22 +102,34 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    let currentJob = job;
+    if (
+      shouldAdvance &&
+      currentJob.status !== "completed" &&
+      currentJob.status !== "failed"
+    ) {
+      const progress = await processScrapeJobBatch(supabase, currentJob.id);
+      if (progress?.job) {
+        currentJob = progress.job;
+      }
+    }
+
     return NextResponse.json({
       message:
-        job.status === "completed"
+        currentJob.status === "completed"
           ? "Scrape completed"
           : "Scrape in progress",
-      job_id: job.id,
-      status: job.status,
-      done: job.status === "completed",
-      hasMore: job.status !== "completed",
-      nextCursor: job.cursor,
-      batch_size: job.batch_size,
-      accounts_total: job.accounts_total,
-      accounts_processed: job.accounts_processed,
-      failed_accounts: job.failed_accounts,
-      total_reels: job.total_reels,
-      last_error: job.last_error,
+      job_id: currentJob.id,
+      status: currentJob.status,
+      done: currentJob.status === "completed",
+      hasMore: currentJob.status !== "completed",
+      nextCursor: currentJob.cursor,
+      batch_size: currentJob.batch_size,
+      accounts_total: currentJob.accounts_total,
+      accounts_processed: currentJob.accounts_processed,
+      failed_accounts: currentJob.failed_accounts,
+      total_reels: currentJob.total_reels,
+      last_error: currentJob.last_error,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

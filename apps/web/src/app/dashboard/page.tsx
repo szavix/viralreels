@@ -60,7 +60,7 @@ export default function DashboardPage() {
       let polls = 0;
       while (!latest.done && polls < 120) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        const statusResponse = await fetch(`/api/scrape?jobId=${jobId}`);
+        const statusResponse = await fetch(`/api/scrape?jobId=${jobId}&advance=1`);
         const statusData = await statusResponse.json();
         if (!statusResponse.ok) {
           throw new Error(statusData.error || "Failed to fetch scrape status");
