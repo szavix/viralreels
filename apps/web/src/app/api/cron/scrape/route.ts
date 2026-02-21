@@ -6,7 +6,7 @@ import {
   findActiveScrapeJob,
 } from "@/services/scrape-jobs";
 
-const CRON_LOOP_BUDGET_MS = 500_000;
+const CRON_LOOP_BUDGET_MS = 250_000;
 const DAILY_DEFAULT_BATCH_SIZE = 4;
 
 /**
@@ -82,4 +82,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export const maxDuration = 600;
+export const maxDuration = 300;

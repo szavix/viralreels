@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@viralreels/supabase";
 import { findActiveScrapeJob, processScrapeJobBatch } from "@/services/scrape-jobs";
 
-const CRON_LOOP_BUDGET_MS = 500_000;
+const CRON_LOOP_BUDGET_MS = 250_000;
 
 /**
  * GET /api/cron/scrape-runner
@@ -64,4 +64,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export const maxDuration = 600;
+export const maxDuration = 300;

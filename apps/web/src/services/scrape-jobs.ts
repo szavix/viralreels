@@ -13,7 +13,7 @@ type Client = SupabaseClient<any>;
 
 const DEFAULT_BATCH_SIZE = 4;
 const MAX_BATCH_SIZE = 20;
-const PROCESS_TIME_BUDGET_MS = 500_000;
+const PROCESS_TIME_BUDGET_MS = 250_000;
 
 export interface ScrapeJob {
   id: string;
