@@ -28,9 +28,19 @@ export async function POST(request: NextRequest) {
       forceNew?: boolean;
     };
 
-    const job = forceNew
-      ? await createScrapeJob(supabase, user!.id, batchSize)
-      : await ensureScrapeJob(supabase, user!.id, batchSize);
+    let job;
+    try {
+      job = forceNew
+        ? await createScrapeJob(supabase, user!.id, batchSize)
+        : await ensureScrapeJob(supabase, user!.id, batchSize);
+    } catch (createError) {
+      const code = (createError as { code?: string } | null)?.code;
+      if (code === "23505") {
+        job = await ensureScrapeJob(supabase, user!.id, batchSize);
+      } else {
+        throw createError;
+      }
+    }
 
     const progress = await processScrapeJobBatch(supabase, job.id);
     const current = progress?.job ?? (await getScrapeJobById(supabase, job.id));

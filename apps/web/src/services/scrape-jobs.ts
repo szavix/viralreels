@@ -61,16 +61,28 @@ export async function getLatestUserScrapeJob(client: Client, userId: string) {
 }
 
 export async function findActiveScrapeJob(client: Client) {
-  const { data, error } = await client
+  // Prefer jobs already running to avoid reviving stale queued rows.
+  const runningResult = await client
     .from("scrape_jobs")
     .select("*")
-    .in("status", ["queued", "running"])
-    .order("created_at", { ascending: true })
+    .eq("status", "running")
+    .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) throw error;
-  return (data ?? null) as ScrapeJob | null;
+  if (runningResult.error) throw runningResult.error;
+  if (runningResult.data) return runningResult.data as ScrapeJob;
+
+  const queuedResult = await client
+    .from("scrape_jobs")
+    .select("*")
+    .eq("status", "queued")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (queuedResult.error) throw queuedResult.error;
+  return (queuedResult.data ?? null) as ScrapeJob | null;
 }
 
 export async function createScrapeJob(
@@ -103,7 +115,17 @@ export async function ensureScrapeJob(
 ) {
   const active = await findActiveScrapeJob(client);
   if (active) return active;
-  return createScrapeJob(client, requestedBy, batchSize);
+  try {
+    return await createScrapeJob(client, requestedBy, batchSize);
+  } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
+    // Unique partial index can reject concurrent inserts. Reuse active in that case.
+    if (code === "23505") {
+      const existing = await findActiveScrapeJob(client);
+      if (existing) return existing;
+    }
+    throw error;
+  }
 }
 
 export async function processScrapeJobBatch(client: Client, jobId?: string) {
