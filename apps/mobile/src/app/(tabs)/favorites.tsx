@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -20,6 +21,8 @@ import tw from "@/lib/tw";
 
 export default function FavoritesScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isLandscape = width > 700;
   const [favorites, setFavorites] = useState<FavoriteReel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -131,6 +134,11 @@ export default function FavoritesScreen() {
                     💬 {formatCount(item.comment_count)}
                   </Text>
                 </View>
+                {!isLandscape && item.description ? (
+                  <Text style={tw`mb-2 text-xs text-muted-foreground`} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                ) : null}
 
                 <View style={tw`flex-row items-center gap-2`}>
                   <TouchableOpacity

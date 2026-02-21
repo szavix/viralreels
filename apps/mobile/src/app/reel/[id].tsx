@@ -6,8 +6,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Linking,
-  Dimensions,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
@@ -27,10 +27,10 @@ import {
 } from "@/lib/api";
 import tw from "@/lib/tw";
 
-const { width } = Dimensions.get("window");
-
 export default function ReelDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { width } = useWindowDimensions();
+  const isLandscape = width > 700;
   const [reel, setReel] = useState<Reel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -133,7 +133,12 @@ export default function ReelDetailScreen() {
   return (
     <ScrollView style={tw`flex-1 bg-background`}>
       {/* Video player */}
-      <View style={[tw`bg-black`, { width, height: width * (16 / 9), maxHeight: 500 }]}>
+      <View
+        style={[
+          tw`bg-black`,
+          { width, height: isLandscape ? Math.min(width * 0.56, 360) : width * (16 / 9), maxHeight: 500 },
+        ]}
+      >
         {reel.video_url ? (
           <Video
             ref={videoRef}
@@ -183,7 +188,7 @@ export default function ReelDetailScreen() {
         </View>
 
         {/* Stats grid */}
-        <View style={tw`flex-row justify-between mb-4`}>
+        <View style={tw`mb-4 flex-row flex-wrap justify-between`}>
           <StatBox label="Views" value={formatCount(reel.view_count)} emoji="👁" />
           <StatBox label="Likes" value={formatCount(reel.like_count)} emoji="❤️" />
           <StatBox label="Comments" value={formatCount(reel.comment_count)} emoji="💬" />

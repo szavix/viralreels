@@ -7,7 +7,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
+  useWindowDimensions,
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -30,13 +30,14 @@ import {
 } from "@/lib/api";
 import tw from "@/lib/tw";
 
-const { width } = Dimensions.get("window");
-const COLUMN_COUNT = 2;
 const GAP = 8;
-const CARD_WIDTH = (width - GAP * (COLUMN_COUNT + 1)) / COLUMN_COUNT;
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const columnCount = width >= 1100 ? 5 : width >= 900 ? 4 : width >= 700 ? 3 : 2;
+  const horizontalPadding = 8;
+  const cardWidth = (width - horizontalPadding * 2 - GAP * (columnCount - 1)) / columnCount;
   const [reels, setReels] = useState<Reel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -162,9 +163,9 @@ export default function DashboardScreen() {
       <TouchableOpacity
         onPress={() => router.push(`/reel/${item.id}`)}
         activeOpacity={0.8}
-        style={[tw`overflow-hidden rounded-xl border border-border bg-card`, { width: CARD_WIDTH, marginBottom: GAP }]}
+        style={[tw`overflow-hidden rounded-xl border border-border bg-card`, { width: cardWidth, marginBottom: GAP }]}
       >
-        <View style={{ width: CARD_WIDTH, height: CARD_WIDTH * (16 / 9) }}>
+        <View style={{ width: cardWidth, height: cardWidth * (16 / 9) }}>
           {item.thumbnail_url ? (
             <Image
               source={{ uri: item.thumbnail_url }}
@@ -358,12 +359,13 @@ export default function DashboardScreen() {
         </View>
       ) : (
         <FlatList
+          key={`reel-grid-${columnCount}`}
           data={reels}
           renderItem={renderReelCard}
           keyExtractor={(item) => item.id}
-          numColumns={COLUMN_COUNT}
+          numColumns={columnCount}
           contentContainerStyle={{ padding: GAP }}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
+          columnWrapperStyle={columnCount > 1 ? { justifyContent: "space-between" } : undefined}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#8b5cf6" />
           }
