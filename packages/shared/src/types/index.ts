@@ -1,11 +1,7 @@
 export type {
-  ApifyReelResult,
-  ApifyProfileResult,
-  ApifyMusicInfo,
-  ApifyComment,
-  ApifyProfileScraperInput,
+  ApifyReelScraperInput,
+  ApifyReelScraperItem,
 } from "./apify";
-export { isReelResult } from "./apify";
 
 export type {
   Account,

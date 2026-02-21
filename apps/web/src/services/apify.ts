@@ -1,15 +1,14 @@
 import { ApifyClient } from "apify-client";
 import type {
-  ApifyProfileResult,
-  ApifyReelResult,
+  ApifyReelScraperItem,
   ReelInsert,
   Account,
 } from "@viralreels/shared";
 import {
-  isReelResult,
   calculateViralityScores,
   isRisingStar,
-  APIFY_PROFILE_SCRAPER_ACTOR,
+  APIFY_REEL_SCRAPER_ACTOR,
+  APIFY_REELS_PER_ACCOUNT_LIMIT,
   APIFY_CALL_DELAY_MS,
   APIFY_MAX_RETRIES,
 } from "@viralreels/shared";
@@ -26,28 +25,28 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Run the Apify Instagram Profile Scraper for a single username.
+ * Run the Apify Instagram Reel Scraper for one or more usernames.
  * Includes retry logic with exponential backoff for rate limits.
  */
-async function runProfileScraper(
-  username: string
-): Promise<ApifyProfileResult | null> {
+async function runReelScraper(
+  usernames: string[]
+): Promise<ApifyReelScraperItem[]> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < APIFY_MAX_RETRIES; attempt++) {
     try {
       const run = await apifyClient
-        .actor(APIFY_PROFILE_SCRAPER_ACTOR)
+        .actor(APIFY_REEL_SCRAPER_ACTOR)
         .call({
-          usernames: [username],
+          username: usernames,
+          resultsLimit: APIFY_REELS_PER_ACCOUNT_LIMIT,
         });
 
       const { items } = await apifyClient
         .dataset(run.defaultDatasetId)
         .listItems();
 
-      if (items.length === 0) return null;
-      return items[0] as unknown as ApifyProfileResult;
+      return items as unknown as ApifyReelScraperItem[];
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       const isRateLimit =
@@ -57,7 +56,7 @@ async function runProfileScraper(
       if (isRateLimit && attempt < APIFY_MAX_RETRIES - 1) {
         const backoffMs = APIFY_CALL_DELAY_MS * Math.pow(2, attempt);
         console.warn(
-          `[Apify] Rate limited on profile "${username}". Retrying in ${backoffMs}ms (attempt ${attempt + 1}/${APIFY_MAX_RETRIES})`
+          `[Apify] Rate limited on reels batch (${usernames.length} usernames). Retrying in ${backoffMs}ms (attempt ${attempt + 1}/${APIFY_MAX_RETRIES})`
         );
         await sleep(backoffMs);
         continue;
@@ -70,46 +69,64 @@ async function runProfileScraper(
   throw lastError ?? new Error("Max retries exceeded");
 }
 
+function firstDefinedNumber(...values: Array<number | null | undefined>): number {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return 0;
+}
+
+function firstDefinedString(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) return value;
+  }
+  return null;
+}
+
 /**
- * Map a raw Apify reel result to a database ReelInsert record,
- * including the follower count from the profile.
+ * Map a raw Apify reels actor result to a database ReelInsert record.
  */
 function mapApifyResultToReel(
-  item: ApifyReelResult,
+  item: ApifyReelScraperItem,
+  account: Account,
   followerCount: number,
   viralScore: number
 ): ReelInsert {
-  const views = item.videoPlayCount ?? item.videoViewCount ?? item.igPlayCount ?? 0;
-  const likes = item.likesCount >= 0 ? item.likesCount : 0;
-  const comments = item.commentsCount ?? 0;
+  const views = firstDefinedNumber(item.play_count, item.videoPlayCount, item.videoViewCount, item.igPlayCount);
+  const likes = Math.max(0, firstDefinedNumber(item.like_count, item.likesCount));
+  const comments = Math.max(0, firstDefinedNumber(item.comment_count, item.commentsCount));
 
-  const postedAt = item.timestamp ? new Date(item.timestamp) : null;
+  const timestamp = firstDefinedString(item.timestamp, item.created_at, item.crawled_at);
+  const postedAt = timestamp ? new Date(timestamp) : null;
   const rising = postedAt ? isRisingStar(postedAt, views) : false;
 
-  const audioTrack =
-    item.musicInfo?.song_name && item.musicInfo?.artist_name
-      ? `${item.musicInfo.artist_name} - ${item.musicInfo.song_name}`
-      : item.musicInfo?.song_name ?? null;
+  const reelUrl =
+    firstDefinedString(item.reel_url, item.url) ??
+    (item.shortcode ? `https://www.instagram.com/reel/${item.shortcode}/` : null) ??
+    (item.shortCode ? `https://www.instagram.com/reel/${item.shortCode}/` : null);
+  const instagramId =
+    firstDefinedString(item.id, item.pk, item.shortcode, item.shortCode, reelUrl) ??
+    `${account.username}-${Date.now()}`;
 
   return {
-    instagram_id: item.id,
-    url: item.url,
-    thumbnail_url: item.displayUrl ?? null,
-    video_url: item.videoUrl ?? null,
+    instagram_id: instagramId,
+    url: reelUrl ?? `https://www.instagram.com/${account.username}/reels/`,
+    thumbnail_url: firstDefinedString(item.image, item.displayUrl),
+    video_url: firstDefinedString(item.video_url, item.videoUrl),
     view_count: views,
     like_count: likes,
     comment_count: comments,
-    share_count: item.reshareCount ?? 0,
-    author_username: item.ownerUsername ?? null,
-    author_full_name: item.ownerFullName ?? null,
+    share_count: 0,
+    author_username: firstDefinedString(item.ownerUsername, account.username),
+    author_full_name: firstDefinedString(item.ownerFullName, account.full_name),
     description: item.caption ?? null,
     hashtags: item.hashtags ?? [],
-    audio_track: audioTrack,
-    audio_id: item.musicInfo?.audio_id ?? null,
-    is_original_audio: item.musicInfo?.uses_original_audio ?? false,
-    video_duration: item.videoDuration ?? null,
+    audio_track: null,
+    audio_id: null,
+    is_original_audio: false,
+    video_duration: null,
     follower_count: followerCount,
-    posted_at: item.timestamp ?? null,
+    posted_at: timestamp,
     viral_score: viralScore,
     is_rising_star: rising,
   };
@@ -133,81 +150,121 @@ export interface ScrapeResult {
   error?: string;
 }
 
-/**
- * Scrape reels for a single Instagram account.
- * Fetches the profile, extracts reel posts from latestPosts,
- * and calculates viral scores using follower count.
- */
-export async function scrapeAccount(account: Account): Promise<ScrapeResult> {
-  try {
-    const profile = await runProfileScraper(account.username);
-
-    if (!profile) {
-      return {
-        account,
-        totalFetched: 0,
-        reelsFiltered: 0,
-        reels: [],
-        error: `No profile data returned for @${account.username}`,
-      };
-    }
-
-    const followerCount = profile.followersCount ?? 0;
-
-    const profileMetadata: ProfileMetadata = {
-      full_name: profile.fullName ?? "",
-      profile_pic_url: profile.profilePicUrlHD ?? profile.profilePicUrl ?? "",
-      follower_count: followerCount,
-      biography: profile.biography ?? "",
-      last_scraped_at: new Date().toISOString(),
-    };
-
-    const latestPosts = profile.latestPosts ?? [];
-    const reelResults = latestPosts.filter(isReelResult);
-    const last10ReelsViews = reelResults
-      .slice(0, 10)
-      .map((item) => item.videoPlayCount ?? item.videoViewCount ?? item.igPlayCount ?? 0);
-
-    const scoringInputs = reelResults.map((item) => {
-      const views = item.videoPlayCount ?? item.videoViewCount ?? item.igPlayCount ?? 0;
-      return {
-        follower_count: followerCount,
-        views,
-        likes: item.likesCount >= 0 ? item.likesCount : 0,
-        comments: item.commentsCount ?? 0,
-        shares: item.reshareCount ?? 0,
-        date_posted: item.timestamp,
-        // Daily snapshots are not available in current scraper payload.
-        daily_views_history: [],
-        last_10_reels_views: last10ReelsViews,
-      };
-    });
-    const scoredReels = calculateViralityScores(scoringInputs);
-    const mappedReels = reelResults.map((item, idx) =>
-      mapApifyResultToReel(item, followerCount, scoredReels[idx]?.viral_score ?? 0)
-    );
-
-    return {
-      account,
-      profileMetadata,
-      totalFetched: latestPosts.length,
-      reelsFiltered: mappedReels.length,
-      reels: mappedReels,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(
-      `[Scraper] Failed to scrape account "@${account.username}":`,
-      message
-    );
+function mapItemsToScrapeResult(account: Account, reelItems: ApifyReelScraperItem[]): ScrapeResult {
+  if (reelItems.length === 0) {
     return {
       account,
       totalFetched: 0,
       reelsFiltered: 0,
       reels: [],
-      error: message,
+      error: `No reels data returned for @${account.username}`,
     };
   }
+
+  const followerCount = Math.max(0, account.follower_count ?? 0);
+  const last10ReelsViews = reelItems
+    .slice(0, 10)
+    .map((item) =>
+      firstDefinedNumber(item.play_count, item.videoPlayCount, item.videoViewCount, item.igPlayCount)
+    );
+
+  const scoringInputs = reelItems.map((item) => {
+    const views = firstDefinedNumber(item.play_count, item.videoPlayCount, item.videoViewCount, item.igPlayCount);
+    return {
+      follower_count: followerCount,
+      views,
+      likes: Math.max(0, firstDefinedNumber(item.like_count, item.likesCount)),
+      comments: Math.max(0, firstDefinedNumber(item.comment_count, item.commentsCount)),
+      shares: 0,
+      date_posted: firstDefinedString(item.timestamp, item.created_at, item.crawled_at),
+      daily_views_history: [],
+      last_10_reels_views: last10ReelsViews,
+    };
+  });
+
+  const scoredReels = calculateViralityScores(scoringInputs);
+  const mappedReels = reelItems.map((item, idx) =>
+    mapApifyResultToReel(item, account, followerCount, scoredReels[idx]?.viral_score ?? 0)
+  );
+
+  return {
+    account,
+    totalFetched: reelItems.length,
+    reelsFiltered: mappedReels.length,
+    reels: mappedReels,
+  };
+}
+
+/**
+ * Scrape reels for a batch of accounts in a single actor run.
+ * Falls back to per-account runs if the batch run fails.
+ */
+export async function scrapeAccountsBatch(accounts: Account[]): Promise<ScrapeResult[]> {
+  if (accounts.length === 0) return [];
+
+  const usernames = accounts.map((account) => account.username);
+  const accountByUsername = new Map(accounts.map((account) => [account.username.toLowerCase(), account]));
+
+  try {
+    const reelItems = await runReelScraper(usernames);
+    const itemsByUsername = new Map<string, ApifyReelScraperItem[]>();
+
+    for (const item of reelItems) {
+      const owner = firstDefinedString(item.ownerUsername)?.toLowerCase();
+      if (!owner || !accountByUsername.has(owner)) continue;
+      const bucket = itemsByUsername.get(owner);
+      if (bucket) {
+        bucket.push(item);
+      } else {
+        itemsByUsername.set(owner, [item]);
+      }
+    }
+
+    return accounts.map((account) => {
+      const key = account.username.toLowerCase();
+      const matchedItems = itemsByUsername.get(key) ?? [];
+      return mapItemsToScrapeResult(account, matchedItems);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[Scraper] Batch run failed for ${accounts.length} accounts. Falling back to per-account calls:`,
+      message
+    );
+
+    const fallbackResults: ScrapeResult[] = [];
+
+    for (let i = 0; i < accounts.length; i++) {
+      const account = accounts[i];
+      try {
+        const singleItems = await runReelScraper([account.username]);
+        fallbackResults.push(mapItemsToScrapeResult(account, singleItems));
+      } catch (singleError) {
+        const singleMessage = singleError instanceof Error ? singleError.message : String(singleError);
+        fallbackResults.push({
+          account,
+          totalFetched: 0,
+          reelsFiltered: 0,
+          reels: [],
+          error: singleMessage,
+        });
+      }
+      if (i < accounts.length - 1) {
+        await sleep(APIFY_CALL_DELAY_MS);
+      }
+    }
+
+    return fallbackResults;
+  }
+}
+
+/**
+ * Scrape reels for a single Instagram account.
+ * Fetches reels directly from the account Reels tab actor output.
+ */
+export async function scrapeAccount(account: Account): Promise<ScrapeResult> {
+  const [result] = await scrapeAccountsBatch([account]);
+  return result;
 }
 
 /**

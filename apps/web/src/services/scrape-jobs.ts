@@ -6,7 +6,7 @@ import {
   linkReelToAccount,
   updateAccountProfile,
 } from "@viralreels/supabase";
-import { scrapeAccount, throttle } from "@/services/apify";
+import { scrapeAccountsBatch } from "@/services/apify";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -150,38 +150,36 @@ export async function processScrapeJobBatch(client: Client, jobId?: string) {
     })
     .eq("id", job.id);
 
-  for (let i = 0; i < batchAccounts.length; i++) {
-    if (Date.now() - startTime > PROCESS_TIME_BUDGET_MS) break;
-    const account = batchAccounts[i];
+  if (Date.now() - startTime <= PROCESS_TIME_BUDGET_MS) {
+    const results = await scrapeAccountsBatch(batchAccounts);
 
-    try {
-      const scrapeResult = await scrapeAccount(account);
-      if (scrapeResult.profileMetadata) {
-        await updateAccountProfile(
-          client,
-          account.id,
-          scrapeResult.profileMetadata
-        );
-      }
-      if (scrapeResult.reels.length > 0) {
-        const upsertedReels = await upsertReels(client, scrapeResult.reels);
-        for (const reel of upsertedReels) {
-          await linkReelToAccount(client, reel.id, account.id);
+    for (const scrapeResult of results) {
+      const account = scrapeResult.account;
+      try {
+        if (scrapeResult.profileMetadata) {
+          await updateAccountProfile(
+            client,
+            account.id,
+            scrapeResult.profileMetadata
+          );
         }
-      }
-      reels += scrapeResult.reelsFiltered;
-      if (scrapeResult.error) {
+        if (scrapeResult.reels.length > 0) {
+          const upsertedReels = await upsertReels(client, scrapeResult.reels);
+          for (const reel of upsertedReels) {
+            await linkReelToAccount(client, reel.id, account.id);
+          }
+        }
+        reels += scrapeResult.reelsFiltered;
+        if (scrapeResult.error) {
+          failed += 1;
+          lastError = scrapeResult.error;
+        }
+      } catch (err) {
         failed += 1;
-        lastError = scrapeResult.error;
+        lastError = err instanceof Error ? err.message : String(err);
       }
-    } catch (err) {
-      failed += 1;
-      lastError = err instanceof Error ? err.message : String(err);
-    }
 
-    processed += 1;
-    if (i < batchAccounts.length - 1) {
-      await throttle();
+      processed += 1;
     }
   }
 

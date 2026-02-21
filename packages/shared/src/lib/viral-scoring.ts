@@ -118,7 +118,7 @@ export function calculateReelViralityMetrics(
   const shares = toSafeCount(reel.shares);
 
   const view_to_follower_ratio = safeDivide(views, followerCount);
-  const engagement_rate_per_view = safeDivide(likes + comments + shares, views);
+  const engagement_rate_per_view = safeDivide(likes + comments, views);
   const share_rate = safeDivide(shares, views);
 
   const last10 = (reel.last_10_reels_views ?? [])
@@ -160,26 +160,22 @@ export function calculateViralityScores(
 
   const vfrValues = metrics.map((m) => m.view_to_follower_ratio);
   const ervValues = metrics.map((m) => m.engagement_rate_per_view * 10);
-  const shareRateValues = metrics.map((m) => m.share_rate * 20);
   const multiplierValues = metrics.map((m) => m.virality_multiplier);
   const accelerationValues = metrics.map((m) => m.acceleration);
 
   const vfrBounds = getOutlierBounds(vfrValues);
   const ervBounds = getOutlierBounds(ervValues);
-  const shareBounds = getOutlierBounds(shareRateValues);
   const multiplierBounds = getOutlierBounds(multiplierValues);
   const accelerationBounds = getOutlierBounds(accelerationValues);
 
   return metrics.map((metric) => {
     const vfrCapped = clamp(metric.view_to_follower_ratio, vfrBounds.lower, vfrBounds.upper);
     const ervCapped = clamp(metric.engagement_rate_per_view * 10, ervBounds.lower, ervBounds.upper);
-    const shareCapped = clamp(metric.share_rate * 20, shareBounds.lower, shareBounds.upper);
     const multiplierCapped = clamp(metric.virality_multiplier, multiplierBounds.lower, multiplierBounds.upper);
     const accelerationCapped = clamp(metric.acceleration, accelerationBounds.lower, accelerationBounds.upper);
 
     const vfrNorm = minMaxNormalize(vfrCapped, vfrBounds.lower, vfrBounds.upper);
     const ervNorm = minMaxNormalize(ervCapped, ervBounds.lower, ervBounds.upper);
-    const shareNorm = minMaxNormalize(shareCapped, shareBounds.lower, shareBounds.upper);
     const multiplierNorm = minMaxNormalize(
       multiplierCapped,
       multiplierBounds.lower,
@@ -192,10 +188,9 @@ export function calculateViralityScores(
     );
 
     const weighted =
-      0.35 * vfrNorm +
-      0.25 * ervNorm +
-      0.2 * shareNorm +
-      0.15 * multiplierNorm +
+      0.4 * vfrNorm +
+      0.35 * ervNorm +
+      0.2 * multiplierNorm +
       0.05 * accelerationNorm;
 
     const viral_score = clamp(weighted * 100, 0, 100);

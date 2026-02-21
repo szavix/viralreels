@@ -20,8 +20,11 @@ export const VIRAL_TIER_COLORS = {
   cold: "#6b7280",
 } as const;
 
-/** Apify actor ID for the Instagram Profile Scraper */
-export const APIFY_PROFILE_SCRAPER_ACTOR = "apify/instagram-profile-scraper";
+/** Apify actor ID for the Instagram Reel Scraper (Reels tab) */
+export const APIFY_REEL_SCRAPER_ACTOR = "apify/instagram-reel-scraper";
+
+/** Number of latest reels to fetch per account to control cost */
+export const APIFY_REELS_PER_ACCOUNT_LIMIT = 5;
 
 /** Delay between Apify calls to avoid rate limits (ms) */
 export const APIFY_CALL_DELAY_MS = 2000;
